@@ -1,8 +1,8 @@
+SHELL=/bin/bash
 PYTHON=`which python`
 NAME=`python setup.py --name`
 VERSION=`python setup.py --version`
 SDIST=dist/$(NAME)-$(VERSION).tar.gz
-VENV=/tmp/venv
 
 
 all: check test source deb
@@ -32,16 +32,11 @@ check:
 	# pychecker
 	# pymetrics
 
-init:
-	pip install -r requirements.txt --use-mirrors
+venv:
+	test -d venv || virtualenv venv
+	. venv/bin/activate && pip install -r requirements.txt
 
-init-dev:
-	pip install -r requirements.txt --use-mirrors
-	pip install -r requirements-dev.txt --use-mirrors
-
-update:
-	rm ez_setup.py
-	wget http://peak.telecommunity.com/dist/ez_setup.py
+init: clean venv
 
 daily:
 	$(PYTHON) setup.py bdist egg_info --tag-date
@@ -58,6 +53,5 @@ deploy:
 
 clean:
 	$(PYTHON) setup.py clean
-	rm -rf build/ MANIFEST dist build my_program.egg-info deb_dist
+	rm -rf build/ MANIFEST dist build my_program.egg-info deb_dist venv
 	find . -name '*.pyc' -delete
-
