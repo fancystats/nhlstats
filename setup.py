@@ -6,6 +6,7 @@ from setuptools import setup, find_packages
 REQUIREMENTS = [i.strip() for i in open("requirements.txt").readlines()]
 
 # Bring __version__ into the current scope
+__version__ = None  # Predeclare to make linters happy.
 execfile('nhlstats/version.py')
 
 setup(name='nhlstats',
