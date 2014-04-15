@@ -25,21 +25,25 @@ def GetDataForGames(games=[]):
         GetDataForGame(game)
 
 
-def GetGames(updates=False):
+def GetGames(active=True):
     """
     Return a tuple of games.  Updates gets finished games to check for updated stats,
     if False (default) it returns active games.
     """
-    if updates:
-        # Get a list of recently finished games to check for updates on
-        pass
-    else:
-        # Get a list of active games.
-        pass
 
 
-def main(action):
+def main(action='collect'):
     """
     The main entry point for the application
     """
-    GetDataForGames(GetGames(action))
+    logger.debug('Dispatching action %s' % action)
+    # By default, we collect info on current games
+    if action == 'collect':
+        GetDataForGames(GetGames(active=True))
+    # Otherwise we can look to update finished games
+    elif action == 'update':
+        GetDataForGames(GetGames(active=False))
+    elif action in actions:
+        raise NotImplementedError('Action "%s" is known, but not (yet?) implemented' % action)
+    else:
+        raise ValueError('Unknown action "%s"' % action)
