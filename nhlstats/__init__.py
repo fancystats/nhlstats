@@ -16,16 +16,16 @@ actions = [
 ]
 
 
-def GetDataForGame(game):
+def get_data_for_game(game):
     pass
 
 
-def GetDataForGames(games=[]):
+def get_data_for_games(games=[]):
     for game in games:
-        GetDataForGame(game)
+        get_data_for_game(game)
 
 
-def GetGames(active=True, beginning=None, end=None):
+def get_games(active=True, beginning=None, end=None):
     """
     Return a tuple of games.  Updates gets finished games to check for updated stats,
     if False (default) it returns active games. beginning and end allow you set a range
@@ -40,10 +40,10 @@ def main(action='collect'):
     logger.debug('Dispatching action %s' % action)
     # By default, we collect info on current games
     if action == 'collect':
-        GetDataForGames(GetGames(active=True))
+        get_data_for_games(get_games(active=True))
     # Otherwise we can look to update finished games
     elif action == 'update':
-        GetDataForGames(GetGames(active=False))
+        get_data_for_games(get_games(active=False))
     elif action in actions:
         raise NotImplementedError('Action "%s" is known, but not (yet?) implemented' % action)
     else:
