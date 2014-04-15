@@ -5,8 +5,11 @@ from setuptools import setup, find_packages
 
 REQUIREMENTS = [i.strip() for i in open("requirements.txt").readlines()]
 
+# Bring __version__ into the current scope
+execfile('nhlstats/version.py')
+
 setup(name='nhlstats',
-      version='0.0.1',
+      version=__version__,
       author='Jim Kelly',
       author_email='pthread1981@gmail.com',
       url='http://www.fancystats.org',

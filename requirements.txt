@@ -1,4 +1,4 @@
-unittest2
+nose
 pylint
 SQLAlchemy
 scrapy

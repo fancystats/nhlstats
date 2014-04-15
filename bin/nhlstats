@@ -1,24 +1,41 @@
 #!/usr/bin/env python
 
+import sys
 import logging
 import optparse
 
-from nhlstats import main
+from nhlstats import main, actions, __version__
 
 
 if __name__ == '__main__':
-    parser = optparse.OptionParser()
-    parser.add_option('-u', '--updates', dest='updats', action='store_true', default=False,
-                      help='check for updates to stats on finished games.')
+    parser = optparse.OptionParser(usage='usage: %prog [options] ACTION\n\nACTION is one of "collect" or "update"')
+
     parser.add_option('-v', '--verbose', dest='verbose', action='store_true', default=False,
                       help='enable verbose logging')
+    parser.add_option('-V', '--version', dest='version', action='store_true', default=False,
+                      help='display version information and exit')
 
     (options, args) = parser.parse_args()
+
+    if options.version:
+        print 'Version: ' + __version__
+        sys.exit(0)
+
+    if not args:
+        print 'ERROR: must supply an action.'
+        parser.print_usage()
+        sys.exit(1)
+    elif args[0].lower() not in actions:
+        print 'ERROR: unknown action "%s"' % args[0]
+        parser.print_usage()
+        sys.exit(1)
 
     logLevel = logging.INFO
     if options.verbose:
         logLevel = logging.DEBUG
 
     logging.basicConfig(name=__name__, level=logLevel, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+    logging.debug('Setting loglevel to DEBUG')
 
-    main(options.updates)
+    if args[0].lower() != 'testignore':
+        main(args[0])

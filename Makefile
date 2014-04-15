@@ -21,8 +21,8 @@ rpm:
 install:
 	$(PYTHON) setup.py install --install-layout=deb
 
-test:
-	unit2 discover -s tests -t .
+test: venv
+	. venv/bin/activate && nosetests
 
 check:
 	find . -name \*.py | grep -v "^test_" | xargs pylint --errors-only --reports=n
