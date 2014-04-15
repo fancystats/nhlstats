@@ -25,10 +25,11 @@ def GetDataForGames(games=[]):
         GetDataForGame(game)
 
 
-def GetGames(active=True):
+def GetGames(active=True, beginning=None, end=None):
     """
     Return a tuple of games.  Updates gets finished games to check for updated stats,
-    if False (default) it returns active games.
+    if False (default) it returns active games. beginning and end allow you set a range
+    for the search, with no end indicating until the time.
     """
 
 
