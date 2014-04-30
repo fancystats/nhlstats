@@ -18,6 +18,11 @@ class Collector(object):
         self.url_ends = url_ends
         self.cache_dir = cache_dir
 
+        # This quirky check is to deal with the empty url_end we add in
+        # the scrape method
+        if [item for item in self.url_ends if item.strip()]:
+            raise NotImplementedError('We do not currently support this')
+
     def check_season(self, season):
         """
         Useful for season based collectors, this checks the seasonis of
@@ -32,17 +37,13 @@ class Collector(object):
             # simplify the iteration logic
             self.url_ends.append(' ')
 
-        results = []
-
         for end in self.url_ends:
             url = urljoin(self.base_url, end.strip())
             parsed = parse(url).getroot()
 
             # The parse functionality must be implemented by
-            # our sub
-            results.extend(self.parse(parsed))
-
-        return results
+            # our sub.  We currently aren't
+            return self.parse(parsed)
 
     def url_to_filename(self, url):
         hash_file = sha1(url).hexdigest() + '.html'
@@ -75,13 +76,20 @@ class NHLSeason(Collector):
         # Pick up teams that don't exist anymore (they're not links to team pages)
         teams.extend([item.text for item in data.xpath('//span[@class="team"]')])
 
-        results = []
+        results = {}
 
         for team in teams:
             i += 1
             division = data.xpath('//*[text()="%s"]/parent::td/parent::tr/parent::tbody/preceding-sibling::thead/tr[1]/th[@abbr="DIV"]' % team)[0].text
             conference = [item.get('class').replace(conferenceText, '') for item in data.xpath('//*[text()="%s"]/parent::td/parent::tr/parent::tbody/parent::table/preceding-sibling::div[starts-with(@class, "%s")]' % (team, conferenceText))][-1]
-            results.append((team, conference, division))
+
+            if not conference in results:
+                results[conference] = {}
+
+            if not division in results[conference]:
+                results[conference][division] = []
+            
+            results[conference][division].append(team)
 
         return results
 
@@ -105,7 +113,7 @@ class Teams(Collector):
         for team in teams[1:]:
             name = team.attrib['title']
             url = team.attrib['href']
-
+            print name, url
             data.append((name, url))
 
         return data
