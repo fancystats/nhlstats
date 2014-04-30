@@ -72,8 +72,9 @@ class Teams(Base):
 
     team_id = Column(Integer, primary_key=True)
     name = Column(String)
-    coach = Column(Integer, ForeignKey('coaches.coach_id'))
-    division = Column(Integer, ForeignKey('divisions.division_id'))
+    season_id = Column(Integer, ForeignKey('seasions.season_id'))
+    division_id = Column(Integer, ForeignKey('divisions.division_id'))
+    url = Column(String)
 
 
 class Games(Base):
@@ -82,6 +83,7 @@ class Games(Base):
     game_id = Column(Integer, primary_key=True)
 
     number = Column(Integer)
+    name = Column(String)  # Some games, like the Winter Classic, are named.
     start_time = Column(DateTime)
     end_time = (Column(DateTime))
     season_id = Column(Integer, ForeignKey('seasons.season_id'))
@@ -100,6 +102,7 @@ class Seasons(Base):
     start_date = Column(Date)
     end_date = Column(Date)
     num_of_games = Column(Integer)
+    game_type = Column(Enum('PRE', 'REG', 'POST'))
 
 
 class Events(Base):

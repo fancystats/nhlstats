@@ -1,4 +1,6 @@
 nose
 pylint
 SQLAlchemy
-scrapy
+lxml
+cssselect
+thready
