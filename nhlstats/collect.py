@@ -9,6 +9,14 @@ from lxml.html import parse
 from urlparse import urljoin
 
 
+class UnexpectedPageContents(Exception):
+    """
+    Used for when the page is retrieved, but the contents are
+    unexpected
+    """
+    pass
+
+
 class Collector(object):
     """
     Base scraper object implementing generic functionality.
@@ -19,7 +27,8 @@ class Collector(object):
         self.cache_dir = cache_dir
 
         # This quirky check is to deal with the empty url_end we add in
-        # the scrape method
+        # the scrape method.  But seriously, we don't support this
+        # craziness just yet.
         if [item for item in self.url_ends if item.strip()]:
             raise NotImplementedError('We do not currently support this')
 
@@ -43,6 +52,7 @@ class Collector(object):
 
             # The parse functionality must be implemented by
             # our sub.  We currently aren't
+            self.verify(parsed)
             return self.parse(parsed)
 
     def url_to_filename(self, url):
@@ -56,6 +66,14 @@ class Collector(object):
         """
         return
 
+    def verify(self, data):
+        """
+        This optional method is for verifying the page contents are as
+        expected. Raise UnexpectedPageContents if the contents of data
+        are unexpected.
+        """
+        return
+
 
 class NHLSeason(Collector):
     """
@@ -64,6 +82,8 @@ class NHLSeason(Collector):
     """
     def __init__(self, season, base_url='http://www.nhl.com/ice/standings.htm?season=%s&type=DIV'):
         self.check_season(season)
+        self.season = season
+
         super(NHLSeason, self).__init__(base_url % season)
 
     def parse(self, data):
@@ -93,6 +113,13 @@ class NHLSeason(Collector):
 
         return results
 
+    def verify(self, data):
+        seasonBlocks = data.xpath('//div[@class="sectionHeader"]/h3')
+        expectedSeason = self.season[:4] + '-' + self.season[4:]
+
+        if not (seasonBlocks and seasonBlocks[0].text.strip() == expectedSeason):
+            raise UnexpectedPageContents('Expected %s season, found %s' % (expectedSeason, seasonBlocks[0].text.strip()))
+
 
 class Teams(Collector):
     """
@@ -107,14 +134,14 @@ class Teams(Collector):
     def parse(self, data):
         teams = data.cssselect('div#teamMenu a')
 
-        data = []
+        data = {}
 
         # Start from index 1, as 0 is the NHL logo.
         for team in teams[1:]:
             name = team.attrib['title']
             url = team.attrib['href']
-            print name, url
-            data.append((name, url))
+
+            data[name] = url
 
         return data
 
