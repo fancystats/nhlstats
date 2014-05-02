@@ -4,6 +4,8 @@ NAME=`python setup.py --name`
 VERSION=`python setup.py --version`
 SDIST=dist/$(NAME)-$(VERSION).tar.gz
 
+# Fixes clang compile errors
+ARCHFLAGS=-Wno-error=unused-command-line-argument-hard-error-in-future
 
 all: check test source deb
 
