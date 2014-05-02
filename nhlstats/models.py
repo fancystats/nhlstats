@@ -92,17 +92,14 @@ class Games(Base):
     home_team_id = Column(Integer, ForeignKey('teams.team_id'))
     away_team_id = Column(Integer, ForeignKey('teams.team_id'))
     report_url = Column(String)
+    game_type = Column(Enum('PRE', 'REG', 'POST'))
 
 
 class Seasons(Base):
     __tablename__ = 'seasons'
 
     season_id = Column(Integer, primary_key=True)
-    name = Column(String)  # Ex. 2014/2015
-    start_date = Column(Date)
-    end_date = Column(Date)
-    num_of_games = Column(Integer)
-    game_type = Column(Enum('PRE', 'REG', 'POST'))
+    name = Column(String)  # Ex. 20142015
 
 
 class Events(Base):

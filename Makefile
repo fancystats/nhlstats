@@ -55,5 +55,5 @@ deploy:
 
 clean:
 	$(PYTHON) setup.py clean
-	rm -rf build/ MANIFEST dist build nhlstats.egg-info deb_dist venv
+	rm -rf build/ MANIFEST dist build nhlstats.egg-info deb_dist venv cache
 	find . -name '*.pyc' -delete

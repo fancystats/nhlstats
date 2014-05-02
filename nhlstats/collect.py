@@ -4,6 +4,7 @@ Collect concerns itself with the screen scraping functionality.
 
 import os
 import re
+import urllib2
 from hashlib import sha1
 from lxml.html import parse
 from urlparse import urljoin
@@ -48,7 +49,7 @@ class Collector(object):
 
         for end in self.url_ends:
             url = urljoin(self.base_url, end.strip())
-            parsed = parse(url).getroot()
+            parsed = parse(self.load_from_cache(url)).getroot()
 
             # The parse functionality must be implemented by
             # our sub.  We currently aren't
@@ -58,6 +59,30 @@ class Collector(object):
     def url_to_filename(self, url):
         hash_file = sha1(url).hexdigest() + '.html'
         return os.path.join(self.cache_dir, hash_file)
+
+    def store_cache(self, url, content):
+        """
+        Cache a local copy of the file.
+        """
+
+        # If the cache directory does not exist, make one.
+        if not os.path.isdir(self.cache_dir):
+            os.makedirs(self.cache_dir)
+
+        local_path = self.url_to_filename(url)
+        with open(local_path, 'wb') as fp:
+            fp.write(content)
+
+    def load_from_cache(self, url):
+        """
+        If we do not have a cached version,
+        get one. Return pointer to that.
+        """
+        local_path = self.url_to_filename(url)
+        if not os.path.exists(local_path):
+            self.store_cache(url, urllib2.urlopen(url).read())
+
+        return local_path
 
     def parse(self, data):
         """
