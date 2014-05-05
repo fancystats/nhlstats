@@ -6,7 +6,7 @@ http://www.nhl.com/scores/htmlreports/20132014/PL021195.HTM
 """
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Date, DateTime, CheckConstraint
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Date, Time, CheckConstraint
 Base = declarative_base()
 
 
@@ -82,10 +82,9 @@ class Games(Base):
 
     game_id = Column(Integer, primary_key=True)
 
-    number = Column(Integer)
-    name = Column(String)  # Some games, like the Winter Classic, are named.
+    start_date = Column(Date)
     start_time = Column(DateTime)
-    end_time = (Column(DateTime))
+    end_time = Column(DateTime)
     season_id = Column(Integer, ForeignKey('seasons.season_id'))
     arena_id = Column(Integer, ForeignKey('arenas.arena_id'))
     attendence = Column(Integer)

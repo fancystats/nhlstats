@@ -4,10 +4,15 @@ Collect concerns itself with the screen scraping functionality.
 
 import os
 import re
+import pytz
 import urllib2
+import datetime
 from hashlib import sha1
 from lxml.html import parse
 from urlparse import urljoin
+
+
+GAME_TYPES = ['PRE', 'REG', 'POST']
 
 
 class UnexpectedPageContents(Exception):
@@ -33,6 +38,15 @@ class Collector(object):
         if [item for item in self.url_ends if item.strip()]:
             raise NotImplementedError('We do not currently support this')
 
+    def check_game_type(self, game_type):
+        """
+        Useful for collectors dealing with games, there are three game
+        types, preseason, regular, and postseason. Verify our game_type
+        is known.
+        """
+        if game_type not in GAME_TYPES:
+            raise ValueError('Game type of %s is unknown' % game_type)
+
     def check_season(self, season):
         """
         Useful for season based collectors, this checks the seasonis of
@@ -40,6 +54,12 @@ class Collector(object):
         """
         if not re.match('[0-9]{8}', season):
             raise ValueError('Season "%s" is not of the correct format, which is two directly concatonated YYYY values, ie 20132014')
+
+    def convert_datetime_to_utc(self, date, tz=pytz.timezone('US/Eastern')):
+        """
+        Given a datetime object, convert it to utc from tz (defaults to US/Eastern)
+        """
+        return tz.localize(date).astimezone(pytz.timezone('UTC'))
 
     def scrape(self):
         if not self.url_ends:
@@ -114,10 +134,10 @@ class NHLSeason(Collector):
     def parse(self, data):
         conferenceText = 'conferenceHeader'
         i = 0
-        
+
         # Pick up normal teams
         teams = [item.text for item in data.xpath('//td[@style="text-align:left;"]/a[2]')]
-        
+
         # Pick up teams that don't exist anymore (they're not links to team pages)
         teams.extend([item.text for item in data.xpath('//span[@class="team"]')])
 
@@ -133,7 +153,7 @@ class NHLSeason(Collector):
 
             if not division in results[conference]:
                 results[conference][division] = []
-            
+
             results[conference][division].append(team)
 
         return results
@@ -146,7 +166,67 @@ class NHLSeason(Collector):
             raise UnexpectedPageContents('Expected %s season, found %s' % (expectedSeason, seasonBlocks[0].text.strip()))
 
 
-class Teams(Collector):
+class NHLSchedule(Collector):
+    """
+    Scrapes the season schedule from the NHL, careful to only include
+    games with NHL teams (they'll have olympic games in there, for
+    instance)
+    """
+    def __init__(self, season, teams, game_type='REG', base_url='http://www.nhl.com/ice/schedulebyseason.htm?season=%s&gameType=%s&team=&network=&venue='):
+        self.check_season(season)
+        self.check_game_type(game_type)
+        self.teams = teams
+        self.season = season
+        self.game_type = game_type
+
+        super(NHLSchedule, self).__init__(base_url % (season, GAME_TYPES.index(game_type) + 1))
+
+    def parse(self, data):
+        games = []
+
+        # Iterate over the schedule rows
+        for row in data.xpath('//table[@class="data schedTbl"]/tbody/tr'):
+            teams = [item.text for item in row.xpath('td[@class="team"]/div[@class="teamName"]/a')]
+
+            # If we don't have two teams, we must be in some header row
+            if not teams:
+                continue
+            else:
+                for team in teams:
+                    # Make sure both of the teams are known NHL teams, if not skip to the next
+                    if team not in self.teams:
+                        continue
+
+            date = row.xpath('td[@class="date"]/div[@class="skedStartDateSite"]')[0].text
+            startDate = datetime.datetime.strptime(date.strip(), '%a %b %d, %Y').date()
+
+            # If there isn't yet a known time for the game, that's okay, let's just
+            # leave it as None, we'll be checking again.
+            if 'TBD' not in row.xpath('td[@class="time"]')[0].text_content():
+                time = row.xpath('td[@class="time"]/div[@class="skedStartTimeEST"]')[0].text
+                localTime = datetime.datetime.strptime(date + ' ' + time.replace('ET', '').strip(),  '%a %b %d, %Y %I:%M %p')
+                startTime = self.convert_datetime_to_utc(localTime).time()
+            else:
+                startTime = None
+
+            games.append({
+                'season': self.season,
+                'date': startDate,
+                'time': startTime,
+                'home': teams[1],
+                'visitor': teams[0],
+                'start': startDate,
+                'type': self.game_type
+            })
+
+        return games
+
+    def verify(self, data):
+        if not data.xpath('//table[@class="data schedTbl"]/tbody/tr'):
+            raise UnexpectedPageContents('Now schedule block found on page.')
+
+
+class NHLTeams(Collector):
     """
     Unfortunately because the NHL is happy to mix in Olympic
     games and the like with their schedule, we must populate
@@ -154,7 +234,7 @@ class Teams(Collector):
     games, which presumably only contain NHL teams.
     """
     def __init__(self, base_url='http://www.nhl.com/ice/teams.htm'):
-        super(Teams, self).__init__(base_url)
+        super(NHLTeams, self).__init__(base_url)
 
     def parse(self, data):
         teams = data.cssselect('div#teamMenu a')
