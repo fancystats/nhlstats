@@ -98,3 +98,15 @@ class TestCollection(unittest.TestCase):
         assert(len(mayFirst) == 1)
         assert(mayFirst[0]['visitor'] == u'Montr\xe9al' and mayFirst[0]['home'] == 'Boston')
         assert(mayFirst[0]['time'] == datetime.time(23, 30))
+
+        # Let's try getting some data from the first post-lockout pre-season
+        postLockoutPre = collect.NHLSchedule('20052006', teams, 'PRE').scrape()
+        sepTwentySixth = [game for game in postLockoutPre if game['start'] == datetime.date(2005, 9, 26)]
+        assert(len(sepTwentySixth) == 1)
+        assert(sepTwentySixth[0]['visitor'] == 'Vancouver' and sepTwentySixth[0]['home'] == 'Calgary')
+        assert(sepTwentySixth[0]['time'] == datetime.time(1, 0))
+
+        # And one final thing, make sure we can get the first post lockout season and there
+        # are 82 games per team.
+        postLockout = collect.NHLSchedule('20052006', teams).scrape()
+        assert(len(postLockout)/15 == 82)

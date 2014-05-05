@@ -186,16 +186,14 @@ class NHLSchedule(Collector):
 
         # Iterate over the schedule rows
         for row in data.xpath('//table[@class="data schedTbl"]/tbody/tr'):
-            teams = [item.text for item in row.xpath('td[@class="team"]/div[@class="teamName"]/a')]
+            teams = [item.text for item in row.xpath('td[@class="team"]/div[@class="teamName"]/a|td[@class="team"]/div[@class="teamName"]') if item.text]
 
             # If we don't have two teams, we must be in some header row
             if not teams:
                 continue
             else:
-                for team in teams:
-                    # Make sure both of the teams are known NHL teams, if not skip to the next
-                    if team not in self.teams:
-                        continue
+                if [team for team in teams if u'\xa0' in team]:
+                    continue
 
             date = row.xpath('td[@class="date"]/div[@class="skedStartDateSite"]')[0].text
             startDate = datetime.datetime.strptime(date.strip(), '%a %b %d, %Y').date()
