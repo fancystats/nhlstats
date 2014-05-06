@@ -172,6 +172,8 @@ class NHLSchedule(Collector):
     games with NHL teams (they'll have olympic games in there, for
     instance)
     """
+    SCHEDULE_ROW_XPATH = '//table[@class="data schedTbl"]/tbody/tr'
+
     def __init__(self, season, game_type='REG', base_url='http://www.nhl.com/ice/schedulebyseason.htm?season=%s&gameType=%s&team=&network=&venue='):
         self.check_season(season)
         self.check_game_type(game_type)
@@ -184,16 +186,24 @@ class NHLSchedule(Collector):
         games = []
 
         # Iterate over the schedule rows
-        for row in data.xpath('//table[@class="data schedTbl"]/tbody/tr'):
-            teams = [item.text for item in row.xpath('td[@class="team"]/div[@class="teamName"]/a|td[@class="team"]/div[@class="teamName"]') if item.text]
+        for row in data.xpath(self.SCHEDULE_ROW_XPATH):
+            game = self.parse_row(row)
 
-            # If we don't have two teams, we must be in some header row
-            if not teams:
-                continue
-            else:
-                if [team for team in teams if u'\xa0' in team]:
-                    continue
+            if game:
+                games.append(game)
 
+        return games
+
+    def parse_row(self, row):
+        teams = [item.text for item in row.xpath('td[@class="team"]/div[@class="teamName"]/a|td[@class="team"]/div[@class="teamName"]') if item.text]
+
+        # If we don't have two teams, we must be in some header row
+        if not len(teams) == 2:
+            return
+        # If we have a non-breaking space, it's an Olympic team.
+        elif [team for team in teams if u'\xa0' in team]:
+            return
+        else:
             date = row.xpath('td[@class="date"]/div[@class="skedStartDateSite"]')[0].text
             startDate = datetime.datetime.strptime(date.strip(), '%a %b %d, %Y').date()
 
@@ -206,7 +216,7 @@ class NHLSchedule(Collector):
             else:
                 startTime = None
 
-            games.append({
+            return {
                 'season': self.season,
                 'date': startDate,
                 'time': startTime,
@@ -214,13 +224,42 @@ class NHLSchedule(Collector):
                 'visitor': teams[0],
                 'start': startDate,
                 'type': self.game_type
-            })
-
-        return games
+            }
 
     def verify(self, data):
         if not data.xpath('//table[@class="data schedTbl"]/tbody/tr'):
             raise UnexpectedPageContents('Now schedule block found on page.')
+
+
+class NHLGameReports(NHLSchedule):
+    """
+    Collects GameReport ids from an NHL Schedule
+    """
+    # Will match the type to group 1 and the game id to group 2
+    GAME_ID_REGEX = re.compile('http://www.nhl.com/gamecenter/en/(recap|preview)\?id=[0-9]{4}([0-9]+)')
+
+    def parse(self, data):
+        games = []
+
+        # Iterate over the schedule rows
+        for row in data.xpath(self.SCHEDULE_ROW_XPATH):
+            game = self.parse_row(row)
+
+            if game:
+                scheduleLinks = row.xpath('td[@class="skedLinks"]/a')
+
+                idNum = None
+                for link in scheduleLinks:
+                    match = re.match(self.GAME_ID_REGEX, link.attrib['href'])
+                    if match:
+                        idNum = match.group(2)
+                        break
+
+                if idNum:
+                    game['reportid'] = idNum
+                    games.append(game)
+
+        return games
 
 
 class NHLTeams(Collector):
@@ -246,11 +285,6 @@ class NHLTeams(Collector):
             data[name] = url
 
         return data
-
-
-class Schedule(Collector):
-    def __init__(self, season, base_url):
-        self.check_season(season)
 
 
 class Events(Collector):

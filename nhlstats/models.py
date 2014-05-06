@@ -90,7 +90,7 @@ class Games(Base):
     attendence = Column(Integer)
     home_team_id = Column(Integer, ForeignKey('teams.team_id'))
     away_team_id = Column(Integer, ForeignKey('teams.team_id'))
-    report_url = Column(String)
+    reportid = Column(String)
     game_type = Column(Enum('PRE', 'REG', 'POST'))
 
 

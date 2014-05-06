@@ -109,3 +109,10 @@ class TestCollection(unittest.TestCase):
         # are 82 games per team.
         postLockout = collect.NHLSchedule('20052006').scrape()
         assert(len(postLockout)/15 == 82)
+
+    def test_nhlgamereports(self):
+        """
+        Test our ability to grab the game report id
+        """
+        reports = collect.NHLGameReports('20132014').scrape()
+    
