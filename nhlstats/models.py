@@ -6,7 +6,7 @@ http://www.nhl.com/scores/htmlreports/20132014/PL021195.HTM
 """
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Date, Time, CheckConstraint
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Date, DateTime, CheckConstraint
 Base = declarative_base()
 
 

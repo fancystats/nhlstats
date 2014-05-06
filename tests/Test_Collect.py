@@ -115,4 +115,31 @@ class TestCollection(unittest.TestCase):
         Test our ability to grab the game report id
         """
         reports = collect.NHLGameReports('20132014').scrape()
-    
+
+        # First ensure every result has a report id.  We don't want any without.
+        # Some games in a season won't have them yet if it's active, but that's
+        # expected as they aren't daded until close to the game.
+        self.assertListEqual([game for game in reports if not game.get('reportid')], [])
+
+        # Since this is a completed season, however, we expect every game should
+        # have one
+        assert(len(reports)/15 == 82)
+
+        # Let's grab the March 16th Caps game like we did in the schedule tests
+        # and ensure we have the expected report id for it
+        capsGame = [game for game in reports if game['start'] == datetime.date(2014, 3, 16) and game['home'] == 'Washington']
+        assert(len(capsGame) == 1)
+        assert(capsGame[0]['reportid'] == '021014')
+
+        # Now let's grab an older season to make sure it works way back when
+        postLockout = collect.NHLGameReports('20052006').scrape()
+        assert(len(postLockout)/15 == 82)
+
+        # Let's check the post lockout post season, and ensure we can retrieve
+        # a specific game id
+        postLockoutPostSeason = collect.NHLGameReports('20052006', 'POST').scrape()
+        yeOldePlayoffGame = [game for game in postLockoutPostSeason if game['start'] == datetime.date(2006, 4, 24) and game['home'] == 'Carolina']
+
+        # Make sure we got just one game:
+        assert(len(yeOldePlayoffGame) == 1)
+        assert(yeOldePlayoffGame[0]['reportid'] == '030122')
