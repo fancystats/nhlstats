@@ -172,10 +172,9 @@ class NHLSchedule(Collector):
     games with NHL teams (they'll have olympic games in there, for
     instance)
     """
-    def __init__(self, season, teams, game_type='REG', base_url='http://www.nhl.com/ice/schedulebyseason.htm?season=%s&gameType=%s&team=&network=&venue='):
+    def __init__(self, season, game_type='REG', base_url='http://www.nhl.com/ice/schedulebyseason.htm?season=%s&gameType=%s&team=&network=&venue='):
         self.check_season(season)
         self.check_game_type(game_type)
-        self.teams = teams
         self.season = season
         self.game_type = game_type
 

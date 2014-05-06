@@ -66,8 +66,7 @@ class TestCollection(unittest.TestCase):
         """
         Test our collections of a season schedule of games
         """
-        teams = collect.NHLSeason('20132014').scrape().keys()
-        rego = collect.NHLSchedule('20132014', teams).scrape()
+        rego = collect.NHLSchedule('20132014').scrape()
 
         # There's an 82 game regular season, let's make sure we have all the games.
         assert(len(rego)/15 == 82)
@@ -87,7 +86,7 @@ class TestCollection(unittest.TestCase):
         # Check to make sure that the right season is set for all games.
         self.assertListEqual([game for game in rego if game['season'] != '20132014'], [])
 
-        playoffs = collect.NHLSchedule('20132014', teams, 'POST').scrape()
+        playoffs = collect.NHLSchedule('20132014', 'POST').scrape()
 
         # Check to make sure that the right season is set for all games.
         self.assertListEqual([game for game in playoffs if game['season'] != '20132014'], [])
@@ -100,7 +99,7 @@ class TestCollection(unittest.TestCase):
         assert(mayFirst[0]['time'] == datetime.time(23, 30))
 
         # Let's try getting some data from the first post-lockout pre-season
-        postLockoutPre = collect.NHLSchedule('20052006', teams, 'PRE').scrape()
+        postLockoutPre = collect.NHLSchedule('20052006', 'PRE').scrape()
         sepTwentySixth = [game for game in postLockoutPre if game['start'] == datetime.date(2005, 9, 26)]
         assert(len(sepTwentySixth) == 1)
         assert(sepTwentySixth[0]['visitor'] == 'Vancouver' and sepTwentySixth[0]['home'] == 'Calgary')
@@ -108,5 +107,5 @@ class TestCollection(unittest.TestCase):
 
         # And one final thing, make sure we can get the first post lockout season and there
         # are 82 games per team.
-        postLockout = collect.NHLSchedule('20052006', teams).scrape()
+        postLockout = collect.NHLSchedule('20052006').scrape()
         assert(len(postLockout)/15 == 82)
