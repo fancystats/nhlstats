@@ -287,5 +287,36 @@ class NHLTeams(Collector):
         return data
 
 
-class Events(Collector):
+class NHLRoster(Collector):
+    """
+    Gets an NHL Roster for a team
+    """
+    def __init__(self, team, base_url='http://%s.nhl.com/club/roster.htm'):
+        self.teamDomain = 'http://%s.nhl.com' % team
+        super(NHLRoster, self).__init__(base_url % team)
+
+    def parse(self, data):
+        players = []
+        for row in data.xpath('//table[@class="data"]/tr[@class!="hdr"]'):
+            player = {
+                'number': row.xpath('td/span[@class="sweaterNo"]')[0].text,
+                'name': row.xpath('td/nobr/a')[0].text,
+                'url': self.teamDomain + row.xpath('td/nobr/a')[0].attrib['href'],
+                'height': row.xpath('td[3]')[0].text,
+                'weight': row.xpath('td[4]')[0].text,
+                'dob': row.xpath('td[5]')[0].text,
+                'hometown': row.xpath('td[7]')[0].text
+            }
+
+            players.append(player)
+
+        return players
+
+    def verify(self, data):
+        rosterHeadersPlayerName = data.xpath('//table[@class="data"]/tr[@class="hdr"]/td[2]/a')
+        if not (len(rosterHeadersPlayerName) == 3 and 'Name' in rosterHeadersPlayerName[0].text):
+            raise UnexpectedPageContents('Unable to locate roster header as expected on %s' % data.base_url)
+
+
+class NHLEvents(Collector):
     pass

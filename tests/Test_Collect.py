@@ -143,3 +143,22 @@ class TestCollection(unittest.TestCase):
         # Make sure we got just one game:
         assert(len(yeOldePlayoffGame) == 1)
         assert(yeOldePlayoffGame[0]['reportid'] == '030122')
+
+    def test_nhlroster(self):
+        """
+        Test the collection of an nhl team roster
+        """
+        # Here we just pull in a couple rosters and
+        # check the existence of various fields.
+        # It's hard to really check the values.
+        ducks = collect.NHLRoster('ducks').scrape()
+        assert(len(ducks) >= 20)
+        assert(ducks[0].get('name'))
+        assert(ducks[3].get('weight'))
+        assert(ducks[12].get('height'))
+
+        caps = collect.NHLRoster('capitals').scrape()
+        assert(len(caps) >= 20)
+        assert(caps[16].get('hometown'))
+        assert(caps[18].get('number'))
+        assert(caps[19].get('dob'))
