@@ -5,11 +5,11 @@ Collect concerns itself with the screen scraping functionality.
 import os
 import re
 import pytz
+import json
 import urllib2
 import datetime
 from hashlib import sha1
 from lxml.html import parse
-from urlparse import urljoin
 
 
 GAME_TYPES = ['PRE', 'REG', 'POST']
@@ -25,18 +25,15 @@ class UnexpectedPageContents(Exception):
 
 class Collector(object):
     """
-    Base scraper object implementing generic functionality.
+    Base collector object implementing generic functionality.  New
+    collector classes should derive from this, but it shouldn't be
+    used directly to gather data, instead collectors such as
+    HTMLCollector and JSONCollector which derive from this
+    should be used.
     """
-    def __init__(self, base_url, url_ends=[], cache_dir='cache'):
-        self.base_url = base_url
-        self.url_ends = url_ends
+    def __init__(self, url, cache_dir='cache'):
+        self.url = url
         self.cache_dir = cache_dir
-
-        # This quirky check is to deal with the empty url_end we add in
-        # the scrape method.  But seriously, we don't support this
-        # craziness just yet.
-        if [item for item in self.url_ends if item.strip()]:
-            raise NotImplementedError('We do not currently support this')
 
     def check_game_type(self, game_type):
         """
@@ -60,21 +57,6 @@ class Collector(object):
         Given a datetime object, convert it to utc from tz (defaults to US/Eastern)
         """
         return tz.localize(date).astimezone(pytz.timezone('UTC'))
-
-    def scrape(self):
-        if not self.url_ends:
-            # If we don't have any url_ends, add one dummy to
-            # simplify the iteration logic
-            self.url_ends.append(' ')
-
-        for end in self.url_ends:
-            url = urljoin(self.base_url, end.strip())
-            parsed = parse(self.load_from_cache(url)).getroot()
-
-            # The parse functionality must be implemented by
-            # our sub.  We currently aren't
-            self.verify(parsed)
-            return self.parse(parsed)
 
     def url_to_filename(self, url):
         hash_file = sha1(url).hexdigest() + '.html'
@@ -120,16 +102,43 @@ class Collector(object):
         return
 
 
-class NHLSeason(Collector):
+class HTMLCollector(Collector):
+    """
+    The HTML Collector class implements collection by scraping HTML
+    page.
+    """
+    def scrape(self):
+        data = parse(self.load_from_cache(self.url)).getroot()
+
+        # The parse functionality must be implemented by
+        # our sub.  We currently aren't
+        self.verify(data)
+        return self.parse(data)
+
+
+class JSONCollector(Collector):
+    """
+    The JSON Collector class implements collection by scraping
+    a JSON page.
+    """
+    def scrape(self):
+        with open(self.load_from_cache(self.url)) as fp:
+            data = json.load(fp)
+
+            self.verify(data)
+            return self.parse(data)
+
+
+class NHLSeason(HTMLCollector):
     """
     This sets up the scaoffold for an NHL season,
     scraping the conferences, divisions, teams.
     """
-    def __init__(self, season, base_url='http://www.nhl.com/ice/standings.htm?season=%s&type=DIV'):
+    def __init__(self, season, url='http://www.nhl.com/ice/standings.htm?season=%s&type=DIV'):
         self.check_season(season)
         self.season = season
 
-        super(NHLSeason, self).__init__(base_url % season)
+        super(NHLSeason, self).__init__(url % season)
 
     def parse(self, data):
         conferenceText = 'conferenceHeader'
@@ -166,7 +175,7 @@ class NHLSeason(Collector):
             raise UnexpectedPageContents('Expected %s season, found %s' % (expectedSeason, seasonBlocks[0].text.strip()))
 
 
-class NHLSchedule(Collector):
+class NHLSchedule(HTMLCollector):
     """
     Scrapes the season schedule from the NHL, careful to only include
     games with NHL teams (they'll have olympic games in there, for
@@ -174,13 +183,13 @@ class NHLSchedule(Collector):
     """
     SCHEDULE_ROW_XPATH = '//table[@class="data schedTbl"]/tbody/tr'
 
-    def __init__(self, season, game_type='REG', base_url='http://www.nhl.com/ice/schedulebyseason.htm?season=%s&gameType=%s&team=&network=&venue='):
+    def __init__(self, season, game_type='REG', url='http://www.nhl.com/ice/schedulebyseason.htm?season=%s&gameType=%s&team=&network=&venue='):
         self.check_season(season)
         self.check_game_type(game_type)
         self.season = season
         self.game_type = game_type
 
-        super(NHLSchedule, self).__init__(base_url % (season, GAME_TYPES.index(game_type) + 1))
+        super(NHLSchedule, self).__init__(url % (season, GAME_TYPES.index(game_type) + 1))
 
     def parse(self, data):
         games = []
@@ -262,15 +271,15 @@ class NHLGameReports(NHLSchedule):
         return games
 
 
-class NHLTeams(Collector):
+class NHLTeams(HTMLCollector):
     """
     Unfortunately because the NHL is happy to mix in Olympic
     games and the like with their schedule, we must populate
     the teams separately. We do so by looking at pre-season
     games, which presumably only contain NHL teams.
     """
-    def __init__(self, base_url='http://www.nhl.com/ice/teams.htm'):
-        super(NHLTeams, self).__init__(base_url)
+    def __init__(self, url='http://www.nhl.com/ice/teams.htm'):
+        super(NHLTeams, self).__init__(url)
 
     def parse(self, data):
         teams = data.cssselect('div#teamMenu a')
@@ -287,13 +296,13 @@ class NHLTeams(Collector):
         return data
 
 
-class NHLRoster(Collector):
+class NHLRoster(HTMLCollector):
     """
     Gets an NHL Roster for a team
     """
-    def __init__(self, team, base_url='http://%s.nhl.com/club/roster.htm'):
+    def __init__(self, team, url='http://%s.nhl.com/club/roster.htm'):
         self.teamDomain = 'http://%s.nhl.com' % team
-        super(NHLRoster, self).__init__(base_url % team)
+        super(NHLRoster, self).__init__(url % team)
 
     def parse(self, data):
         players = []
@@ -318,5 +327,8 @@ class NHLRoster(Collector):
             raise UnexpectedPageContents('Unable to locate roster header as expected on %s' % data.base_url)
 
 
-class NHLEvents(Collector):
-    pass
+class NHLEvents(JSONCollector):
+    def __init__(self, season, reportid, url='http://live.nhl.com/GameData/%s/%s/PlayByPlay.json'):
+        self.season = season
+        self.reportid = reportid
+        super(NHLEvents, self).__init__(url % (season, season[:4] + reportid))
