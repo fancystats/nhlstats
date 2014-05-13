@@ -2,6 +2,8 @@
 Collect concerns itself with the screen scraping functionality.
 """
 
+# TODO(jkelly) Ensure team names are consistent
+
 import os
 import re
 import pytz
@@ -332,3 +334,14 @@ class NHLEvents(JSONCollector):
         self.season = season
         self.reportid = reportid
         super(NHLEvents, self).__init__(url % (season, season[:4] + reportid))
+
+    def parse(self, data):
+        return {
+            'plays': data['data']['game']['plays']['play'],
+            'away': data['data']['game']['awayteamname'],
+            'home': data['data']['game']['hometeamname']
+        }
+
+    def verify(self, data):
+        if not 'data' in data:
+            raise UnexpectedPageContents('data section of JSON does not exist on %s' % data.base_url)

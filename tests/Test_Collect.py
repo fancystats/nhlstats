@@ -162,3 +162,26 @@ class TestCollection(unittest.TestCase):
         assert(caps[16].get('hometown'))
         assert(caps[18].get('number'))
         assert(caps[19].get('dob'))
+
+    def test_events(self):
+        """
+        Test the collection of game events.
+        """
+        # First check a game from the recent season
+        events = collect.NHLEvents('20132014', '021014').scrape()
+
+        assert(events['away'] == 'Toronto Maple Leafs')
+        assert(events['home'] == 'Washington Capitals')
+        assert(events['plays'][0]['desc'] == 'Joel Ward hit Paul Ranger')
+        assert(events['plays'][0]['xcoord'] == -90)
+        assert(len(events['plays']) == 107)
+
+        # Then check an older game. Sadly 20092010 seems to be
+        # the first year there is location data for.
+        events = collect.NHLEvents('20092010', '020370').scrape()
+        assert(events['home'] == 'Montreal Canadiens')
+        assert(events['away'] == 'Washington Capitals')
+        assert(events['plays'][22]['playername'] == 'Nicklas Backstrom')
+        assert(events['plays'][22]['time'] == '18:16')
+        assert(len(events['plays']) == 89)
+ 
