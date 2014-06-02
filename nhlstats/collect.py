@@ -8,10 +8,16 @@ import os
 import re
 import pytz
 import json
+import logging
 import urllib2
 import datetime
 from hashlib import sha1
 from lxml.html import parse
+
+from version import __version__
+
+logger = logging.getLogger(__name__)
+logger.debug('Loading %s ver %s' % (__name__, __version__))
 
 
 GAME_TYPES = ['PRE', 'REG', 'POST']
@@ -84,7 +90,10 @@ class Collector(object):
         """
         local_path = self.url_to_filename(url)
         if not os.path.exists(local_path):
-            self.store_cache(url, urllib2.urlopen(url).read())
+            try:
+                self.store_cache(url, urllib2.urlopen(url).read())
+            except urllib2.HTTPError:
+                logger.exception('Unable to load page at %s' % url)
 
         return local_path
 
@@ -329,11 +338,11 @@ class NHLRoster(HTMLCollector):
             raise UnexpectedPageContents('Unable to locate roster header as expected on %s' % data.base_url)
 
 
-class NHLEvents(JSONCollector):
+class NHLEventLocations(JSONCollector):
     def __init__(self, season, reportid, url='http://live.nhl.com/GameData/%s/%s/PlayByPlay.json'):
         self.season = season
         self.reportid = reportid
-        super(NHLEvents, self).__init__(url % (season, season[:4] + reportid))
+        super(NHLEventLocations, self).__init__(url % (season, season[:4] + reportid))
 
     def parse(self, data):
         return {
@@ -345,3 +354,47 @@ class NHLEvents(JSONCollector):
     def verify(self, data):
         if not 'data' in data:
             raise UnexpectedPageContents('data section of JSON does not exist on %s' % data.base_url)
+
+
+class NHLEvents(HTMLCollector):
+    def __init__(self, season, reportid, url='http://www.nhl.com/scores/htmlreports/%s/PL%s.HTM'):
+        self.season = season
+        self.reportid = reportid
+        super(NHLEvents, self).__init__(url % (season, reportid))
+
+    def parse(self, data):
+        events = []
+        for row in data.xpath('//tr[@class="evenColor"]'):
+            rowdata = row.xpath('td')
+            awayice = [cell for cell in rowdata[6].xpath('table/tr/td') if u'\xa0' not in cell.text_content()]
+            homeice = [cell for cell in rowdata[7].xpath('table/tr/td') if u'\xa0' not in cell.text_content()]
+
+            events.append({
+                'period': rowdata[1].text,
+                'time': rowdata[3].text,
+                'event': rowdata[4].text,
+                'description': rowdata[5].text,
+                'away': [],
+                'home': []
+            })
+
+            for player in awayice:
+                events[-1]['away'].append({
+                    'player': player.xpath('table/tr/td')[0].text_content().strip(),
+                    'position': player.xpath('table/tr/td')[1].text_content().strip()
+                })
+
+            for player in homeice:
+                events[-1]['home'].append({
+                    'player': player.xpath('table/tr/td')[0].text_content().strip(),
+                    'position': player.xpath('table/tr/td')[1].text_content().strip()
+                })
+
+        return events
+
+    def verify(self, data):
+        header = '\r\n#\r\nPer\r\nStr\r\nTime:ElapsedGame\r\nEvent\r\nDescription\r\nTOR On Ice\r\nWSH On Ice\r\n'
+        headerSearch = [e for e in data.xpath('//tr') if e.text_content() == header]
+
+        if headerSearch and not (data.xpath('//table[@id="Visitor"]') and data.xpath('//table[@id="Home"]')):
+            raise UnexpectedPageContents('Unable to locate events page as expected on %s' % data.base_url)

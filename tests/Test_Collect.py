@@ -163,12 +163,12 @@ class TestCollection(unittest.TestCase):
         assert(caps[18].get('number'))
         assert(caps[19].get('dob'))
 
-    def test_events(self):
+    def test_eventlocation(self):
         """
         Test the collection of game events.
         """
         # First check a game from the recent season
-        events = collect.NHLEvents('20132014', '021014').scrape()
+        events = collect.NHLEventLocations('20132014', '021014').scrape()
 
         assert(events['away'] == 'Toronto Maple Leafs')
         assert(events['home'] == 'Washington Capitals')
@@ -178,10 +178,40 @@ class TestCollection(unittest.TestCase):
 
         # Then check an older game. Sadly 20092010 seems to be
         # the first year there is location data for.
-        events = collect.NHLEvents('20092010', '020370').scrape()
+        events = collect.NHLEventLocations('20092010', '020370').scrape()
         assert(events['home'] == 'Montreal Canadiens')
         assert(events['away'] == 'Washington Capitals')
         assert(events['plays'][22]['playername'] == 'Nicklas Backstrom')
         assert(events['plays'][22]['time'] == '18:16')
         assert(len(events['plays']) == 89)
- 
+
+    def test_events(self):
+        # Let's get event data for the 2014.03.16 game between
+        # the Caps and the Leafs
+        events = collect.NHLEvents('20132014', '021014').scrape()
+
+        # Check some basics, start with the start!
+        assert(events[0]['description'] == 'Period Start- Local time: 3:08 EDT')
+        assert(events[0]['event'] == 'PSTR')
+        assert(events[0]['time'] == '0:00')
+
+        # Now check some info on players on the ice
+        assert(len(events[42]['home']) == 6)
+        assert({'player': '92', 'position': 'C'} in events[42]['home'])
+        assert({'player': '41', 'position': 'G'} in events[42]['home'])
+
+        # Toronto was short handed here (I don't have to tell you this
+        # led to a goal - but it wasn't Ovi from the Ovi spot!)
+        assert(len(events[42]['away']) == 5)
+        assert({'player': '41', 'position': 'L'} in events[42]['away'])
+        assert({'player': '15', 'position': 'D'} in events[42]['away'])
+
+        assert(events[42]['event'] == 'GOAL')
+
+        # Check we have the ending information
+        assert(events[-1]['description'] == 'Game End- Local time: 5:42 EDT')
+        assert(events[-1]['away'] == [])
+        assert(events[-1]['home'] == [])
+        assert(events[-1]['period'] == '3')
+        assert(events[-1]['time'] == '20:00')
+        assert(events[-1]['event'] == 'GEND')
