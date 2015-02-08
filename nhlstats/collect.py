@@ -168,10 +168,10 @@ class NHLSeason(HTMLCollector):
             division = data.xpath('//*[text()="%s"]/parent::td/parent::tr/parent::tbody/preceding-sibling::thead/tr[1]/th[@abbr="DIV"]' % team)[0].text
             conference = [item.get('class').replace(conferenceText, '') for item in data.xpath('//*[text()="%s"]/parent::td/parent::tr/parent::tbody/parent::table/preceding-sibling::div[starts-with(@class, "%s")]' % (team, conferenceText))][-1]
 
-            if not conference in results:
+            if conference not in results:
                 results[conference] = {}
 
-            if not division in results[conference]:
+            if division not in results[conference]:
                 results[conference][division] = []
 
             results[conference][division].append(team)
@@ -352,7 +352,7 @@ class NHLEventLocations(JSONCollector):
         }
 
     def verify(self, data):
-        if not 'data' in data:
+        if 'data' not in data:
             raise UnexpectedPageContents('data section of JSON does not exist on %s' % data.base_url)
 
 
