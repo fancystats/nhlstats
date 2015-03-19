@@ -10,7 +10,7 @@ Note that most active development occurs in the dev branch.
 Development Environment
 -----------------------
 
-The development environment requires Python 2.7.5 or newer and pip.  Third-party libraries can be retrieved by running `make dev-init`.  It is recommended that you make use of virtualenv and enable that prior to initializing.
+The development environment requires Python 2.7.5 or newer and pip.  Third-party libraries can be retrieved by running `make init`.  It is recommended that you make use of virtualenv and enable that prior to initializing.
 
 Additionally you will need libffi to be installed.  On OS X you can follow the following instructions:
 

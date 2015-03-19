@@ -71,7 +71,7 @@ class TestCollection(unittest.TestCase):
         # There's an 82 game regular season, let's make sure we have all the games.
         assert(len(rego)/15 == 82)
 
-        #{'season': '20132014', 'time': datetime.time(20, 0), 'start': datetime.date(2014, 3, 16), 'visitor': 'Toronto', 'date': datetime.date(2014, 3, 16), 'home': 'Washington', 'type': 'REG'}
+        # {'season': '20132014', 'time': datetime.time(20, 0), 'start': datetime.date(2014, 3, 16), 'visitor': 'Toronto', 'date': datetime.date(2014, 3, 16), 'home': 'Washington', 'type': 'REG'}
         # Let's find the games on March 16th.  NHL.com says there were 9 games.
         marchSixteenth = [game for game in rego if game['start'] == datetime.date(2014, 3, 16)]
         assert(len(marchSixteenth) == 9)

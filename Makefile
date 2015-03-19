@@ -27,16 +27,11 @@ test: venv
 	. venv/bin/activate && nosetests
 
 check:
-	find . -name \*.py | grep -v "^test_" | xargs pylint --errors-only --reports=n
-	# pep8
-	# pyntch
-	# pyflakes
-	# pychecker
-	# pymetrics
+	find . -name \*.py -not -path "./venv*" | grep -v "^test_" | xargs pylint --errors-only --reports=n
 
 venv:
 	test -d venv || virtualenv venv
-	. venv/bin/activate && pip install -r requirements.txt
+	. venv/bin/activate && pip install --use-wheel -r requirements.txt
 
 init: clean venv
 
