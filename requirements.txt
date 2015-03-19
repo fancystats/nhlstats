@@ -1,5 +1,6 @@
 Flask
 Flask-Peewee
+Flask-Script
 cssselect
 lxml
 nose
