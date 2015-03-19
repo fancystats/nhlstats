@@ -2,7 +2,7 @@
 Models
 ======
 
- Creates a series of relevant Peewee models
+ Creates a series of relevant Peewee models.
 
 Ex: Game events
 http://www.nhl.com/scores/htmlreports/20132014/PL021195.HTM

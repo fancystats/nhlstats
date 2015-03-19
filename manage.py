@@ -2,20 +2,20 @@
 
 from flask.ext.script import Manager
 
-from nhlstats import db
 from nhlstats.app import app
+from nhlstats.db import create_tables, drop_tables
 
 manager = Manager(app)
 
 
 @manager.command
-def create_tables():
-    db.create_tables()
+def syncdb():
+    create_tables()
 
 
 @manager.command
-def drop_tables():
-    db.drop_tables()
+def dropdb():
+    drop_tables()
 
 
 if __name__ == "__main__":
