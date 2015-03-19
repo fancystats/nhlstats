@@ -1,7 +1,9 @@
-pytz
-nose
-pylint
-SQLAlchemy
-lxml
+Flask
+Flask-Peewee
 cssselect
+lxml
+nose
+peewee
+pylint
+pytz
 thready
