@@ -27,7 +27,7 @@ test: venv
 	. venv/bin/activate && nosetests
 
 check:
-	find . -name \*.py -not -path "./venv*" | grep -v "^test_" | xargs pylint --errors-only --reports=n
+	find . -name \*.py -not -path "./venv*" | grep -v "^test_" | xargs pylint --errors-only --reports=n --generated-members=name
 
 venv:
 	test -d venv || virtualenv venv
