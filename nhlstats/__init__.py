@@ -15,6 +15,8 @@ logger.debug('Loading %s ver %s' % (__name__, __version__))
 actions = [
     'collect',
     'update',
+    'syncdb',
+    'dropdb',
     'testignore',   # Allows the bin app to be run without calling into here.
 ]
 

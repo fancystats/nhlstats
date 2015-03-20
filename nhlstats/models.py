@@ -9,7 +9,7 @@ http://www.nhl.com/scores/htmlreports/20132014/PL021195.HTM
 """
 
 from peewee import CharField, DateField, DateTimeField, ForeignKeyField, \
-    IntegerField, TextField
+    IntegerField, TextField, Model
 
 from nhlstats.db import db
 
@@ -32,7 +32,7 @@ MODELS = [
 ]
 
 
-class BaseModel(db.Model):
+class BaseModel(Model):
     pass
 
 

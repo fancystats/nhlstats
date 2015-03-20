@@ -8,7 +8,8 @@ from nhlstats import main, actions, __version__
 
 
 if __name__ == '__main__':
-    parser = optparse.OptionParser(usage='usage: %prog [options] ACTION\n\nACTION is one of "collect" or "update"')
+    actions_string = 'ACTION is one of {}'.format(', '.join(actions))
+    parser = optparse.OptionParser(usage='usage: %prog [options] ACTION\n\n{}'.format(actions_string))
 
     parser.add_option('-v', '--verbose', dest='verbose', action='store_true', default=False,
                       help='enable verbose logging')
