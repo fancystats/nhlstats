@@ -3,6 +3,9 @@ import logging
 
 from version import __version__
 
+from .db import create_tables, drop_tables
+
+
 logger = logging.getLogger(__name__)
 logger.debug('Loading %s ver %s' % (__name__, __version__))
 
@@ -44,6 +47,10 @@ def main(action='collect'):
     # Otherwise we can look to update finished games
     elif action == 'update':
         get_data_for_games(get_games(active=False))
+    elif action == 'syncdb':
+        create_tables()
+    elif action == 'dropdb':
+        drop_tables()
     elif action in actions:
         raise NotImplementedError('Action "%s" is known, but not (yet?) implemented' % action)
     else:

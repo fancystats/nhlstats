@@ -23,11 +23,14 @@ rpm:
 install:
 	$(PYTHON) setup.py install --install-layout=deb
 
-test: venv
+develop:
+	$(PYTHON) setup.py develop
+
+test: venv develop
 	. venv/bin/activate && nosetests
 
-check:
-	find . -name \*.py -not -path "./venv*" | grep -v "^test_" | xargs pylint --errors-only --reports=n --generated-members=name
+check: venv
+	. venv/bin/activate && find . -name \*.py -not -path "./venv*" | grep -v "^test_" | xargs pylint --errors-only --reports=n --generated-members=name
 
 venv:
 	test -d venv || virtualenv venv

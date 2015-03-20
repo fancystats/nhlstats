@@ -1,8 +1,7 @@
-from flask_peewee.db import Database
+import os
+from playhouse.db_url import connect
 
-from nhlstats.app import app
-
-db = Database(app)
+db = connect(os.environ.get('DATABASE_URL') or 'sqlite:///default.db')
 
 
 def create_tables():
