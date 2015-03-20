@@ -9,9 +9,7 @@ http://www.nhl.com/scores/htmlreports/20132014/PL021195.HTM
 """
 
 from peewee import CharField, DateField, DateTimeField, ForeignKeyField, \
-    IntegerField, TextField, Model
-
-from nhlstats.db import db
+    IntegerField, TextField, Model, Proxy
 
 # Order should be the order these tables are created.
 MODELS = [
@@ -31,9 +29,12 @@ MODELS = [
     'PlayerEvent'
 ]
 
+db_proxy = Proxy()
+
 
 class BaseModel(Model):
-    pass
+    class Meta:
+        database = db_proxy
 
 
 class Arena(BaseModel):
