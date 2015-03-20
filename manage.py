@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from flask.ext.script import Manager
+from flask_script import Manager
 
 from nhlstats.app import app
 from nhlstats.db import create_tables, drop_tables

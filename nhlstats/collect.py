@@ -318,6 +318,9 @@ class NHLRoster(HTMLCollector):
     def parse(self, data):
         players = []
         for row in data.xpath('//table[@class="data"]/tr[@class!="hdr"]'):
+            if row.xpath("td[@colspan=7]"):
+                continue
+
             player = {
                 'number': row.xpath('td/span[@class="sweaterNo"]')[0].text,
                 'name': row.xpath('td/nobr/a')[0].text,
