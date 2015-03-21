@@ -2,7 +2,7 @@ import os
 
 from playhouse.db_url import connect
 
-from nhlstats.db import models
+from nhlstats import models
 from nhlstats.models import db_proxy
 
 # FIXME: We should probably put all the database connection code in one place
