@@ -17,7 +17,7 @@ from lxml.html import parse
 from version import __version__
 
 logger = logging.getLogger(__name__)
-logger.debug('Loading %s ver %s' % (__name__, __version__))
+logger.debug('Loading {} ver {}'.format(__name__, __version__))
 
 
 GAME_TYPES = ['PRE', 'REG', 'POST']
@@ -50,7 +50,7 @@ class Collector(object):
         is known.
         """
         if game_type not in GAME_TYPES:
-            raise ValueError('Game type of %s is unknown' % game_type)
+            raise ValueError('Game type of {} is unknown'.format(game_type))
 
     def check_season(self, season):
         """
@@ -58,7 +58,7 @@ class Collector(object):
         the correct format.
         """
         if not re.match('[0-9]{8}', season):
-            raise ValueError('Season "%s" is not of the correct format, which is two directly concatonated YYYY values, ie 20132014')
+            raise ValueError('Season "{}" is not of the correct format, which is two directly concatonated YYYY values, ie 20132014'.format(season))
 
     def convert_datetime_to_utc(self, date, tz=pytz.timezone('US/Eastern')):
         """
@@ -93,7 +93,7 @@ class Collector(object):
             try:
                 self.store_cache(url, urllib2.urlopen(url).read())
             except urllib2.HTTPError:
-                logger.exception('Unable to load page at %s' % url)
+                logger.exception('Unable to load page at {}'.format(url))
 
         return local_path
 
@@ -145,11 +145,11 @@ class NHLSeason(HTMLCollector):
     This sets up the scaoffold for an NHL season,
     scraping the conferences, divisions, teams.
     """
-    def __init__(self, season, url='http://www.nhl.com/ice/standings.htm?season=%s&type=DIV'):
+    def __init__(self, season, url='http://www.nhl.com/ice/standings.htm?season={}&type=DIV'):
         self.check_season(season)
         self.season = season
 
-        super(NHLSeason, self).__init__(url % season)
+        super(NHLSeason, self).__init__(url.format(season))
 
     def parse(self, data):
         conferenceText = 'conferenceHeader'
@@ -165,6 +165,9 @@ class NHLSeason(HTMLCollector):
 
         for team in teams:
             i += 1
+            # An exception to our policy of using '{}'.format(foo) occurs here, as
+            # for some reason this throws unicode errors, in a way I don't care
+            # to further investigate beyond trying expected fixes.
             division = data.xpath('//*[text()="%s"]/parent::td/parent::tr/parent::tbody/preceding-sibling::thead/tr[1]/th[@abbr="DIV"]' % team)[0].text
             conference = [item.get('class').replace(conferenceText, '') for item in data.xpath('//*[text()="%s"]/parent::td/parent::tr/parent::tbody/parent::table/preceding-sibling::div[starts-with(@class, "%s")]' % (team, conferenceText))][-1]
 
@@ -183,7 +186,7 @@ class NHLSeason(HTMLCollector):
         expectedSeason = self.season[:4] + '-' + self.season[4:]
 
         if not (seasonBlocks and seasonBlocks[0].text.strip() == expectedSeason):
-            raise UnexpectedPageContents('Expected %s season, found %s' % (expectedSeason, seasonBlocks[0].text.strip()))
+            raise UnexpectedPageContents('Expected {} season, found {}'.format(expectedSeason, seasonBlocks[0].text.strip()))
 
 
 class NHLSchedule(HTMLCollector):
@@ -194,13 +197,13 @@ class NHLSchedule(HTMLCollector):
     """
     SCHEDULE_ROW_XPATH = '//table[@class="data schedTbl"]/tbody/tr'
 
-    def __init__(self, season, game_type='REG', url='http://www.nhl.com/ice/schedulebyseason.htm?season=%s&gameType=%s&team=&network=&venue='):
+    def __init__(self, season, game_type='REG', url='http://www.nhl.com/ice/schedulebyseason.htm?season={}&gameType={}&team=&network=&venue='):
         self.check_season(season)
         self.check_game_type(game_type)
         self.season = season
         self.game_type = game_type
 
-        super(NHLSchedule, self).__init__(url % (season, GAME_TYPES.index(game_type) + 1))
+        super(NHLSchedule, self).__init__(url.format(season, GAME_TYPES.index(game_type) + 1))
 
     def parse(self, data):
         games = []
@@ -311,9 +314,9 @@ class NHLRoster(HTMLCollector):
     """
     Gets an NHL Roster for a team
     """
-    def __init__(self, team, url='http://%s.nhl.com/club/roster.htm'):
-        self.teamDomain = 'http://%s.nhl.com' % team
-        super(NHLRoster, self).__init__(url % team)
+    def __init__(self, team, url='http://{}.nhl.com/club/roster.htm'):
+        self.teamDomain = 'http://{}.nhl.com'.format(team)
+        super(NHLRoster, self).__init__(url.format(team))
 
     def parse(self, data):
         players = []
@@ -338,14 +341,14 @@ class NHLRoster(HTMLCollector):
     def verify(self, data):
         rosterHeadersPlayerName = data.xpath('//table[@class="data"]/tr[@class="hdr"]/td[2]/a')
         if not (len(rosterHeadersPlayerName) == 3 and 'Name' in rosterHeadersPlayerName[0].text):
-            raise UnexpectedPageContents('Unable to locate roster header as expected on %s' % data.base_url)
+            raise UnexpectedPageContents('Unable to locate roster header as expected on {}'.format(data.base_url))
 
 
 class NHLEventLocations(JSONCollector):
-    def __init__(self, season, reportid, url='http://live.nhl.com/GameData/%s/%s/PlayByPlay.json'):
+    def __init__(self, season, reportid, url='http://live.nhl.com/GameData/{}/{}/PlayByPlay.json'):
         self.season = season
         self.reportid = reportid
-        super(NHLEventLocations, self).__init__(url % (season, season[:4] + reportid))
+        super(NHLEventLocations, self).__init__(url.format(season, season[:4] + reportid))
 
     def parse(self, data):
         return {
@@ -356,14 +359,14 @@ class NHLEventLocations(JSONCollector):
 
     def verify(self, data):
         if 'data' not in data:
-            raise UnexpectedPageContents('data section of JSON does not exist on %s' % data.base_url)
+            raise UnexpectedPageContents('data section of JSON does not exist on {}'.format(data.base_url))
 
 
 class NHLEvents(HTMLCollector):
-    def __init__(self, season, reportid, url='http://www.nhl.com/scores/htmlreports/%s/PL%s.HTM'):
+    def __init__(self, season, reportid, url='http://www.nhl.com/scores/htmlreports/{}/PL{}.HTM'):
         self.season = season
         self.reportid = reportid
-        super(NHLEvents, self).__init__(url % (season, reportid))
+        super(NHLEvents, self).__init__(url.format(season, reportid))
 
     def parse(self, data):
         events = []
@@ -400,4 +403,4 @@ class NHLEvents(HTMLCollector):
         headerSearch = [e for e in data.xpath('//tr') if e.text_content() == header]
 
         if headerSearch and not (data.xpath('//table[@id="Visitor"]') and data.xpath('//table[@id="Home"]')):
-            raise UnexpectedPageContents('Unable to locate events page as expected on %s' % data.base_url)
+            raise UnexpectedPageContents('Unable to locate events page as expected on {}'.format(data.base_url))

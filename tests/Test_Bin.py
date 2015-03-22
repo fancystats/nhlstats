@@ -18,7 +18,7 @@ def test_verbose():
     """
     Ensure that -v results in verbose logging
     """
-    assert('DEBUG - root - Setting loglevel to DEBUG' in subprocess.check_output(['bin/nhlstats', '-v', 'testignore'], stderr=subprocess.STDOUT))
+    assert('DEBUG-root: Setting loglevel to DEBUG' in subprocess.check_output(['bin/nhlstats', '-v', 'testignore'], stderr=subprocess.STDOUT))
 
 
 def test_incorrect_action():

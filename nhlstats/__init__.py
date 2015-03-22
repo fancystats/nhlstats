@@ -7,7 +7,7 @@ from .db import create_tables, drop_tables
 
 
 logger = logging.getLogger(__name__)
-logger.debug('Loading %s ver %s' % (__name__, __version__))
+logger.debug('Loading {} ver {}'.format(__name__, __version__))
 
 
 # Actions represents the available textual items that can be passed to main
@@ -42,7 +42,7 @@ def main(action='collect'):
     """
     The main entry point for the application
     """
-    logger.debug('Dispatching action %s' % action)
+    logger.debug('Dispatching action {}'.format(action))
     # By default, we collect info on current games
     if action == 'collect':
         get_data_for_games(get_games(active=True))
@@ -54,6 +54,6 @@ def main(action='collect'):
     elif action == 'dropdb':
         drop_tables()
     elif action in actions:
-        raise NotImplementedError('Action "%s" is known, but not (yet?) implemented' % action)
+        raise NotImplementedError('Action "{}" is known, but not (yet?) implemented'.format(action))
     else:
-        raise ValueError('Unknown action "%s"' % action)
+        raise ValueError('Unknown action "{}"'.format(action))
