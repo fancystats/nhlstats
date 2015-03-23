@@ -8,8 +8,8 @@ Ex: Game events
 http://www.nhl.com/scores/htmlreports/20132014/PL021195.HTM
 """
 
-from peewee import CharField, DateField, DateTimeField, ForeignKeyField, \
-    IntegerField, TextField, Model, Proxy
+from peewee import BooleanField, CharField, DateField, DateTimeField, \
+    ForeignKeyField, IntegerField, TextField, Model, Proxy
 
 # Order should be the order these tables are created.
 MODELS = [
@@ -23,10 +23,12 @@ MODELS = [
     'Player',
     'PlayerSkaterStat',
     'PlayerGoalieStat',
+    'Roster',
     'Coach',
     'Game',
+    'Lineup',
     'Event',
-    'PlayerEvent'
+    'EventPlayer'
 ]
 
 db_proxy = Proxy()
@@ -66,7 +68,8 @@ class Season(BaseModel):
                     ('regular', 'Regular'),
                     ('playoffs', 'Playoffs')]
 
-    league = ForeignKeyField(League, related_name='seasons')
+    league = ForeignKeyField(League, related_name='seasons',
+                             on_delete='CASCADE', on_updated='CASCADE')
     year = CharField()
     type = CharField(choices=SEASON_TYPES)
 
@@ -79,7 +82,8 @@ class Season(BaseModel):
 
 
 class Conference(BaseModel):
-    league = ForeignKeyField(League, related_name='conferences')
+    league = ForeignKeyField(League, related_name='conferences',
+                             on_delete='CASCADE', on_update='CASCADE')
     name = CharField()
 
     class Meta:
@@ -91,7 +95,8 @@ class Conference(BaseModel):
 
 
 class Division(BaseModel):
-    conference = ForeignKeyField(Conference, related_name='divisions')
+    conference = ForeignKeyField(Conference, related_name='divisions',
+                                 on_delete='CASCADE', on_update='CASCADE')
     name = CharField()
 
     class Meta:
@@ -120,13 +125,16 @@ class Schedule(BaseModel):
     SCHEDULE_TYPES = [('regular', 'Regular'),
                       ('preseason', 'Preseason')]
 
-    league = ForeignKeyField(League, related_name='schedules')
+    league = ForeignKeyField(League, related_name='schedules',
+                             on_delete='CASCADE', on_update='CASCADE')
     type = CharField(choices=SCHEDULE_TYPES)
     day = IntegerField()
     game = IntegerField()
     date = DateField()
-    home = ForeignKeyField(Team, related_name='home_scheduled_games')
-    away = ForeignKeyField(Team, related_name='away_scheduled_games')
+    home = ForeignKeyField(Team, related_name='scheduled_home_games',
+                           on_delete='CASCADE', on_update='CASCADE')
+    road = ForeignKeyField(Team, related_name='scheduled_road_games',
+                           on_delete='CASCADE', on_update='CASCADE')
 
     class Meta:
         db_table = 'schedules'
@@ -143,7 +151,6 @@ class Player(BaseModel):
     SHOOTS = [('L', 'Left'),
               ('R', 'Right')]
 
-    team = ForeignKeyField(Team, related_name='players')
     name = CharField()
     no = IntegerField()
     pos = CharField()
@@ -242,6 +249,20 @@ class PlayerGoalieStat(BaseModel):
         return None
 
 
+class Roster(BaseModel):
+    """
+    A team's roster for a specific season. The relationship between a team and
+    a player.
+    """
+    season = ForeignKeyField(Season, related_name='roster')
+    team = ForeignKeyField(Team, related_name='roster')
+    player = ForeignKeyField(Player, related_name='rosters')
+    no = IntegerField()
+
+    class Meta:
+        db_table = 'rosters'
+
+
 class Coach(BaseModel):
     name = CharField()
 
@@ -254,53 +275,137 @@ class Coach(BaseModel):
 
 
 class Game(BaseModel):
-    GAME_TYPES = (('PRE', 'Preseason'),
-                  ('REG', 'Regular'),
-                  ('POST', 'Postseason'))
+    GAME_TYPES = [('pre', 'Preseason'),
+                  ('reg', 'Regular'),
+                  ('post', 'Postseason')]
 
-    start_time = DateTimeField()
-    end_time = DateTimeField()
     season = ForeignKeyField(Season, related_name='games')
     arena = ForeignKeyField(Arena, related_name='games')
     attendence = IntegerField()
-    home_team = ForeignKeyField(Team, related_name='home_games')
-    away_team = ForeignKeyField(Team, related_name='away_games')
-    reportid = CharField()
-    game_type = CharField(choices=GAME_TYPES)
+    home = ForeignKeyField(Team, related_name='home_games')
+    road = ForeignKeyField(Team, related_name='road_games')
+    report_id = CharField()
+    type = CharField(choices=GAME_TYPES)
+    start = DateTimeField()
+    end = DateTimeField()
 
     class Meta:
         db_table = 'games'
         order_by = ('start_time',)
 
 
+class Lineup(BaseModel):
+    """
+    A team's lineup for a specific game. Should probably include scratched
+    players.
+    """
+    game = ForeignKeyField(Game)
+    team = ForeignKeyField(Team)
+    Player = ForeignKeyField(Player)
+    scratched = BooleanField(default=False)
+
+    class Meta:
+        db_table = 'lineups'
+
+
 class Event(BaseModel):
-    STRENGTHS = (('EV', 'Even Strength'),
-                 ('PP', 'Powerplay'),
-                 ('SH', 'Shorthanded'))
+    """
+    Events that occur within a game.
+
+    :param game: Game in which event occured.
+    : type game: Game
+    :param team: Team responsible for event.
+    :type team: Team
+    :param number: Number associated with event.
+    :type number: integer
+    :param period: Period in which the event occured.
+    :type period: integer
+    :param strength: Strength the current team had during event.
+    :type strength: string
+    :param elapse: Amount of time elapsed in period (in seconds).
+    :type elapsed: integer
+    :param remaining: Amount of time remaining in period (in seconds).
+    :type remaining: integer
+    :param type: The type of event that occured.
+    :type type: string
+    :param zone: The zone in which the event occured.
+    :type zone: string or None
+    :param description: A description of the event.
+    :type description: string or None
+    :param player1: Primary player involved in event (ex. goal scorer).
+    :type player1: Player or None
+    :param player2: Secondary player involved in event (ex. primary assist).
+    :type player2: Player or None
+    :param player3: Third player involved in an event (ex. secondary assist).
+    :type player3: Player or None
+    :param shot_type: The type of shot taken (if any).
+    :type shot_type: string or None
+    :param distance: Distance from opponents net.
+    :type distance: integer or None
+    :param penalty: Type of penalty taken (if any).
+    :type penalty: string or None
+    :param penalty_minutes: Amount of penalty minutes given for penalty.
+    :type penalty_minutes: integer or None
+    """
+    STRENGTHS = [('ev', 'Even Strength'),
+                 ('pp', 'Power Play'),
+                 ('sh', 'Short Handed')]
+    EVENT_TYPES = [('block', 'Blocked Shot'),
+                   ('end', 'End of Period'),
+                   ('face', 'Faceoff'),
+                   ('give', 'Giveaway'),
+                   ('goal', 'Goal'),
+                   ('hit', 'Hit'),
+                   ('miss', 'Missed Shot'),
+                   ('penalty', 'Penalty'),
+                   ('shot', 'Shot on Net'),
+                   ('start', 'Start of Period'),
+                   ('stop', 'Stoppage'),
+                   ('take', 'Takewaway')]
+    ZONES = [('home', 'Home'),
+             ('neutral', 'Neutral'),
+             ('road', 'Road')]
+    SHOT_TYPES = [('slap', 'Slap Shot'),
+                  ('snap', 'Snap Shot'),
+                  ('wrist', 'Wrist Shot')]
 
     game = ForeignKeyField(Game, related_name='events')
+    team = ForeignKeyField(Team, null=True)
+    number = IntegerField(verbose_name='#')
     period = IntegerField()
-    strength = CharField(choices=STRENGTHS)
-    elapsed_time = IntegerField()
-    description = CharField()
-    home_offensive_line = CharField()
-    home_defensive_line = CharField()
-    home_goalie = ForeignKeyField(Player, related_name='home_goalie_events')
-    away_offensive_line = CharField()
-    away_defensive_line = CharField()
-    away_goalie = ForeignKeyField(Player, related_name='away_goalie_events')
+    strength = CharField(choices=STRENGTHS, default='EV')
+    elapsed = IntegerField()
+    remaining = IntegerField()
+    type = CharField(choices=EVENT_TYPES)
+    zone = CharField(choices=ZONES, null=True)
+    description = CharField(null=True)
+    player1 = ForeignKeyField(Player, null=True)
+    player2 = ForeignKeyField(Player, null=True)
+    player3 = ForeignKeyField(Player, null=True)
+    shot_type = CharField(choices=SHOT_TYPES, null=True)
+    distance = IntegerField(null=True)
+    penalty = CharField(null=True)
+    penalty_minutes = IntegerField(null=True)
 
     class Meta:
         db_table = 'events'
+        order_by = ('game', 'number')
 
 
-class PlayerEvent(BaseModel):
-    POSITIONS = ('L', 'C', 'R', 'LD', 'RD', 'G', 'E')
+class EventPlayer(BaseModel):
+    """
+    Players who were on the ice at the time of the event.
 
-    player = ForeignKeyField(Player, related_name='player_events')
-    event = ForeignKeyField(Event, related_name='player_events')
-    team = ForeignKeyField(Team, related_name='player_events')
-    position = CharField(choices=POSITIONS)
+    :param event: Event in which the player was on the ice.
+    :type event: Event
+    :param team: The team the player was playing for (denormalization?).
+    :type team: Team
+    :param Player: The player on the ice during the event.
+    :type player: Player
+    """
+    event = ForeignKeyField(Event, related_name='players')
+    team = ForeignKeyField(Team)
+    player = ForeignKeyField(Player)
 
     class Meta:
-        db_table = 'player_events'
+        db_table = 'event_players'
