@@ -69,7 +69,7 @@ class Season(BaseModel):
                     ('playoffs', 'Playoffs')]
 
     league = ForeignKeyField(League, related_name='seasons',
-                             on_delete='CASCADE', on_updated='CASCADE')
+                             on_delete='CASCADE', on_update='CASCADE')
     year = CharField()
     type = CharField(choices=SEASON_TYPES)
 
