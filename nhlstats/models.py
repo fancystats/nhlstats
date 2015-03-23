@@ -291,7 +291,7 @@ class Game(BaseModel):
 
     class Meta:
         db_table = 'games'
-        order_by = ('start_time',)
+        order_by = ('start',)
 
 
 class Lineup(BaseModel):
