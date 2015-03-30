@@ -32,6 +32,9 @@ test: venv develop
 check: venv
 	. venv/bin/activate && find . -name \*.py -not -path "./venv*" | grep -v "^test_" | xargs pylint --errors-only --reports=n --generated-members=name
 
+cache-index:
+	echo > cache/index.html && find cache/* | grep -v index.html | cut -d / -f 2 | xargs -I {} echo "<a href=\"{}\">{}</a><br />" >> cache/index.html
+
 venv:
 	test -d venv || virtualenv venv
 	. venv/bin/activate && pip install --use-wheel -r requirements.txt
