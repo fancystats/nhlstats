@@ -16,11 +16,11 @@ from nhlstats import collect
 
 
 class TestCollection(unittest.TestCase):
-    def test_nhlseason(self):
+    def test_nhldivisions(self):
         """
-        Test our collection of data for a season.
+        Test our collection of data for conferences and divisions.
         """
-        season = collect.NHLSeason('20132014').scrape()
+        divisions = collect.NHLDivisions('20132014').scrape()
 
         expected = {
             'Eastern': {
@@ -35,13 +35,13 @@ class TestCollection(unittest.TestCase):
 
         # Ensure we have the Eastern and Western conference
         for conference in expected:
-            assert(conference in season)
+            assert(conference in divisions)
 
             for division in expected[conference]:
-                assert(division in season[conference])
+                assert(division in divisions[conference])
 
                 for team in expected[conference][division]:
-                    assert(team in season[conference][division])
+                    assert(team in divisions[conference][division])
 
     def test_nhlseason_missing(self):
         """
@@ -49,7 +49,7 @@ class TestCollection(unittest.TestCase):
         """
         with self.assertRaises(collect.UnexpectedPageContents):
             # I've introduced a Y3k bug in my tests! Oh noes!
-            collect.NHLSeason('30003001').scrape()
+            collect.NHLDivisions('30003001').scrape()
 
     def test_nhlteams(self):
         """
@@ -60,7 +60,14 @@ class TestCollection(unittest.TestCase):
         teams = collect.NHLTeams().scrape()
 
         assert(len(teams) == 30)
-        assert(teams['Anaheim Ducks'] == 'http://ducks.nhl.com?navid=nav-teamnav-ana')
+        ducks_expected = {
+            'division': 'pacific',
+            'url': 'http://ducks.nhl.com',
+            'city': 'Anaheim',
+            'acronym': 'ANA',
+            'name': 'Ducks'
+        }
+        assert(ducks_expected in teams)
 
     def test_nhlschedule(self):
         """
@@ -86,7 +93,7 @@ class TestCollection(unittest.TestCase):
         # Check to make sure that the right season is set for all games.
         self.assertListEqual([game for game in rego if game['season'] != '20132014'], [])
 
-        playoffs = collect.NHLSchedule('20132014', 'POST').scrape()
+        playoffs = collect.NHLSchedule('20132014', 'playoffs').scrape()
 
         # Check to make sure that the right season is set for all games.
         self.assertListEqual([game for game in playoffs if game['season'] != '20132014'], [])
@@ -99,7 +106,7 @@ class TestCollection(unittest.TestCase):
         assert(mayFirst[0]['time'] == datetime.time(23, 30))
 
         # Let's try getting some data from the first post-lockout pre-season
-        postLockoutPre = collect.NHLSchedule('20052006', 'PRE').scrape()
+        postLockoutPre = collect.NHLSchedule('20052006', 'preseason').scrape()
         sepTwentySixth = [game for game in postLockoutPre if game['start'] == datetime.date(2005, 9, 26)]
         assert(len(sepTwentySixth) == 1)
         assert(sepTwentySixth[0]['visitor'] == 'Vancouver' and sepTwentySixth[0]['home'] == 'Calgary')
@@ -137,7 +144,7 @@ class TestCollection(unittest.TestCase):
 
         # Let's check the post lockout post season, and ensure we can retrieve
         # a specific game id
-        postLockoutPostSeason = collect.NHLGameReports('20052006', 'POST').scrape()
+        postLockoutPostSeason = collect.NHLGameReports('20052006', 'playoffs').scrape()
         yeOldePlayoffGame = [game for game in postLockoutPostSeason if game['start'] == datetime.date(2006, 4, 24) and game['home'] == 'Carolina']
 
         # Make sure we got just one game:

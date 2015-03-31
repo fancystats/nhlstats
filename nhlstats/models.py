@@ -8,8 +8,17 @@ Ex: Game events
 http://www.nhl.com/scores/htmlreports/20132014/PL021195.HTM
 """
 
+import logging
+
+from .version import __version__
+
 from peewee import BooleanField, CharField, DateField, DateTimeField, \
-    ForeignKeyField, IntegerField, TextField, Model, Proxy
+    ForeignKeyField, IntegerField, TextField, Model, Proxy, \
+    IntegrityError
+
+logger = logging.getLogger(__name__)
+logger.debug('Loading {} ver {}'.format(__name__, __version__))
+
 
 # Order should be the order these tables are created.
 MODELS = [
@@ -38,6 +47,23 @@ class BaseModel(Model):
     class Meta:
         database = db_proxy
 
+    @classmethod
+    def get_or_create(cls, **kwargs):
+        """
+        Creates a model instance if it does not exist.
+        """
+        try:
+            return cls.create(**kwargs)
+        except IntegrityError as e:
+            if logger.getEffectiveLevel() <= logging.DEBUG:
+                logger.warn(
+                    'Failure creating record, attempting to retrieve. ({})'.format(
+                        e.message
+                    )
+                )
+            # It exists, return the existing record
+            return cls.get(**kwargs)
+
 
 class Arena(BaseModel):
     name = CharField()
@@ -53,7 +79,7 @@ class Arena(BaseModel):
 
 
 class League(BaseModel):
-    name = CharField()
+    name = CharField(unique=True)
 
     class Meta:
         db_table = 'leagues'
@@ -64,6 +90,9 @@ class League(BaseModel):
 
 
 class Season(BaseModel):
+    # Note that order matters here! The NHL uses
+    # season type ids that we derive from this
+    # order.
     SEASON_TYPES = [('preseason', 'Preseason'),
                     ('regular', 'Regular'),
                     ('playoffs', 'Playoffs')]
@@ -76,6 +105,24 @@ class Season(BaseModel):
     class Meta:
         db_table = 'seasons'
         order_by = ('league', 'year')
+        indexes = (
+            # create a unique on league/year/type
+            (('league', 'year', 'type'), True),
+        )
+
+    @classmethod
+    def get_season_types(self):
+        """
+        Returns the short season type codes
+        """
+        return [season_type for season_type, season_type_str in self.SEASON_TYPES]
+
+    @classmethod
+    def get_season_type_id(self, season_type):
+        """
+        Returns the season type id number as used by NHL URLs
+        """
+        return Season.get_season_types().index(season_type) + 1
 
     def __unicode__(self):
         return self.year
@@ -84,7 +131,7 @@ class Season(BaseModel):
 class Conference(BaseModel):
     league = ForeignKeyField(League, related_name='conferences',
                              on_delete='CASCADE', on_update='CASCADE')
-    name = CharField()
+    name = CharField(unique=True)
 
     class Meta:
         db_table = 'conferences'
@@ -97,7 +144,7 @@ class Conference(BaseModel):
 class Division(BaseModel):
     conference = ForeignKeyField(Conference, related_name='divisions',
                                  on_delete='CASCADE', on_update='CASCADE')
-    name = CharField()
+    name = CharField(unique=True)
 
     class Meta:
         db_table = 'divisions'
@@ -112,6 +159,7 @@ class Team(BaseModel):
     city = CharField()
     name = CharField()
     acronym = CharField()
+    url = CharField()
 
     class Meta:
         db_table = 'teams'

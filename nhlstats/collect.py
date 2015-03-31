@@ -14,13 +14,11 @@ import datetime
 from hashlib import sha1
 from lxml.html import parse
 
-from version import __version__
+from .version import __version__
+from .models import Season
 
 logger = logging.getLogger(__name__)
 logger.debug('Loading {} ver {}'.format(__name__, __version__))
-
-
-GAME_TYPES = ['PRE', 'REG', 'POST']
 
 
 class UnexpectedPageContents(Exception):
@@ -43,14 +41,14 @@ class Collector(object):
         self.url = url
         self.cache_dir = cache_dir
 
-    def check_game_type(self, game_type):
+    def check_season_type(self, season_type):
         """
         Useful for collectors dealing with games, there are three game
-        types, preseason, regular, and postseason. Verify our game_type
+        types, preseason, regular, and postseason. Verify our season_type
         is known.
         """
-        if game_type not in GAME_TYPES:
-            raise ValueError('Game type of {} is unknown'.format(game_type))
+        if season_type not in Season.get_season_types():
+            raise ValueError('Season type of {} is unknown'.format(season_type))
 
     def check_season(self, season):
         """
@@ -80,6 +78,9 @@ class Collector(object):
             os.makedirs(self.cache_dir)
 
         local_path = self.url_to_filename(url)
+
+        logger.debug('Storing {} in cache as {}'.format(url, local_path))
+
         with open(local_path, 'wb') as fp:
             fp.write(content)
 
@@ -91,9 +92,15 @@ class Collector(object):
         local_path = self.url_to_filename(url)
         if not os.path.exists(local_path):
             try:
+                logger.debug('Unable to load {} from cache ({}), downloading.'.format(url, local_path))
                 self.store_cache(url, urllib2.urlopen(url).read())
-            except urllib2.HTTPError:
-                logger.exception('Unable to load page at {}'.format(url))
+            except (urllib2.HTTPError, urllib2.URLError):
+                logger.error('Unable to load page at {}'.format(url))
+                raise
+        else:
+            logger.debug('Loaded {} from cache ({})'.format(
+                url, local_path
+            ))
 
         return local_path
 
@@ -140,16 +147,21 @@ class JSONCollector(Collector):
             return self.parse(data)
 
 
-class NHLSeason(HTMLCollector):
+# This is a poor name, but better than "Seasons" I suppose
+class NHLDivisions(HTMLCollector):
     """
     This sets up the scaoffold for an NHL season,
     scraping the conferences, divisions, teams.
     """
-    def __init__(self, season, url='http://www.nhl.com/ice/standings.htm?season={}&type=DIV'):
-        self.check_season(season)
+    def __init__(self, season=None, url='http://www.nhl.com/ice/standings.htm?season={}&type=DIV'):
+        if season:
+            self.check_season(season)
+        else:
+            season = ''
+
         self.season = season
 
-        super(NHLSeason, self).__init__(url.format(season))
+        super(NHLDivisions, self).__init__(url.format(season))
 
     def parse(self, data):
         conferenceText = 'conferenceHeader'
@@ -183,9 +195,12 @@ class NHLSeason(HTMLCollector):
 
     def verify(self, data):
         seasonBlocks = data.xpath('//div[@class="sectionHeader"]/h3')
-        expectedSeason = self.season[:4] + '-' + self.season[4:]
+        if self.season:
+            expectedSeason = self.season[:4] + '\-' + self.season[4:]
+        else:
+            expectedSeason = '[0-9]{4}\-[0-9]{4}'
 
-        if not (seasonBlocks and seasonBlocks[0].text.strip() == expectedSeason):
+        if not (seasonBlocks and re.match(expectedSeason, seasonBlocks[0].text.strip())):
             raise UnexpectedPageContents('Expected {} season, found {}'.format(expectedSeason, seasonBlocks[0].text.strip()))
 
 
@@ -197,13 +212,13 @@ class NHLSchedule(HTMLCollector):
     """
     SCHEDULE_ROW_XPATH = '//table[@class="data schedTbl"]/tbody/tr'
 
-    def __init__(self, season, game_type='REG', url='http://www.nhl.com/ice/schedulebyseason.htm?season={}&gameType={}&team=&network=&venue='):
+    def __init__(self, season, season_type='regular', url='http://www.nhl.com/ice/schedulebyseason.htm?season={}&gameType={}&team=&network=&venue='):
         self.check_season(season)
-        self.check_game_type(game_type)
+        self.check_season_type(season_type)
         self.season = season
-        self.game_type = game_type
+        self.season_type = season_type
 
-        super(NHLSchedule, self).__init__(url.format(season, GAME_TYPES.index(game_type) + 1))
+        super(NHLSchedule, self).__init__(url.format(season, Season.get_season_type_id(season_type)))
 
     def parse(self, data):
         games = []
@@ -246,12 +261,12 @@ class NHLSchedule(HTMLCollector):
                 'home': teams[1],
                 'visitor': teams[0],
                 'start': startDate,
-                'type': self.game_type
+                'type': self.season_type
             }
 
     def verify(self, data):
         if not data.xpath('//table[@class="data schedTbl"]/tbody/tr'):
-            raise UnexpectedPageContents('Now schedule block found on page.')
+            raise UnexpectedPageContents('No schedule block found on {} page.'.format(self.season))
 
 
 class NHLGameReports(NHLSchedule):
@@ -296,18 +311,23 @@ class NHLTeams(HTMLCollector):
         super(NHLTeams, self).__init__(url)
 
     def parse(self, data):
-        teams = data.cssselect('div#teamMenu a')
-
-        data = {}
+        retrieved_data = []
 
         # Start from index 1, as 0 is the NHL logo.
-        for team in teams[1:]:
-            name = team.attrib['title']
-            url = team.attrib['href']
+        for team in data.cssselect('div.teamCard'):
+            team_data = {
+                'division': team.getparent().get('class'),
+                'city': team.cssselect('span.teamPlace')[0].text_content(),
+                'name': team.cssselect('span.teamCommon')[0].text_content(),
+                'url': team.cssselect('div.teamLogo>a')[0].attrib['href'],
+                'acronym': team.values()[0].split()[-1].upper()
+            }
 
-            data[name] = url
+            # For some reason these teamCards show up twice, so check
+            if team_data not in retrieved_data:
+                retrieved_data.append(team_data)
 
-        return data
+        return retrieved_data
 
 
 class NHLRoster(HTMLCollector):
