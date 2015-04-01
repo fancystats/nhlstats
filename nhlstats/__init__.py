@@ -4,8 +4,8 @@ import logging
 from version import __version__
 
 from .db import create_tables, drop_tables
-from .models import League, Season, Team, Conference, Division
-from .collect import NHLSchedule, NHLTeams, NHLDivisions
+from .models import League, Season, Team, Conference, Division, Arena
+from .collect import NHLSchedule, NHLTeams, NHLDivisions, NHLArena
 
 
 logger = logging.getLogger(__name__)
@@ -68,6 +68,7 @@ def populate():
         # Convert the textual divison name to a Division model
         team['division'] = Division.get(Division.name ** team['division'])
         Team.get_or_create(**team)
+        Arena.get_or_create(**NHLArena(team['acronym']).scrape())
 
     # Gather our seasons:
     for years in seasons:

@@ -67,8 +67,13 @@ class BaseModel(Model):
 
 class Arena(BaseModel):
     name = CharField()
-    location = CharField()
-    capacity = IntegerField()
+    street = CharField()
+    city = CharField()
+    state = CharField()
+    country = CharField()
+    postal_code = CharField()
+    #TODO: find out how we can get capacity data
+    capacity = IntegerField(null=True)
 
     class Meta:
         db_table = 'arenas'

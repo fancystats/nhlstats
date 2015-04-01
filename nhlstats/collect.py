@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Collect concerns itself with the screen scraping functionality.
 """
@@ -145,6 +146,20 @@ class JSONCollector(Collector):
 
             self.verify(data)
             return self.parse(data)
+
+
+class NHLArena(HTMLCollector):
+    """
+    This retrieves information on an arena from the NHL
+    """
+    def __init__(self, team, url='http://www.nhl.com/ice/ajax/teammapmodal?team={}'):
+        super(NHLArena, self).__init__(url.format(team))
+
+    def parse(self, data):
+        # long re is long
+        info = re.compile('<div style="font-weight: normal; font-size: 12px; font-family: arial,helvetica;"><b>(?P<name>[\w\s\-\,\.\&À-ú]+)</b><br />(?P<street>[\w\s\-\,\.\&À-ú]+)<br />(?P<city>[\w\s\-\,\.\&À-ú]+), (?P<state>[A-Z]{2}), (?P<country>[\w\s\-\,\.\&À-ú]+)  (?P<postal_code>[\w\s\-\,\.\&]+)<br /></div>')
+
+        return re.search(info, data.text_content()).groupdict()
 
 
 # This is a poor name, but better than "Seasons" I suppose
