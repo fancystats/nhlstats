@@ -85,6 +85,7 @@ class Arena(BaseModel):
 
 class League(BaseModel):
     name = CharField(unique=True)
+    abbreviation = CharField()
 
     class Meta:
         db_table = 'leagues'
