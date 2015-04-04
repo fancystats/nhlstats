@@ -22,7 +22,7 @@ def freeze(basedir=None, format='json'):
     if not basedir:
         basedir = FIXTURES_DIR
     if not os.path.isdir(basedir):
-        os.path.mkdir(basedir)
+        os.makedirs(basedir)
     for name in db.tables:
         table = db[name]
         filename = os.path.join(basedir, '{}.{}'.format(name, format))
