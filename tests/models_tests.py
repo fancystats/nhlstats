@@ -32,20 +32,3 @@ class TestModelLeague(unittest.TestCase):
         league = League.select().first()
         self.assertEqual(league.name, 'National Hockey League')
         self.assertEqual(league.abbreviation, 'NHL')
-
-
-def test_event_elapsed_time_constaint():
-    pass
-
-
-def test_season_types_and_ids():
-    """
-    Here we ensure that our season types are in
-    the right order, as we rely on this to convert
-    to the NHLs numeric season type description
-    """
-    assert(len(Season.SEASON_TYPES) == 3)
-    assert(len(Season.get_season_types()) == 3)
-    assert(Season.get_season_type_id('preseason') == 1)
-    assert(Season.get_season_type_id('regular') == 2)
-    assert(Season.get_season_type_id('playoffs') == 3)

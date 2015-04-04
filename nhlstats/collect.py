@@ -53,7 +53,7 @@ class Collector(object):
 
     def check_season(self, season):
         """
-        Useful for season based collectors, this checks the seasonis of
+        Useful for season based collectors, this checks the seasons of
         the correct format.
         """
         if not re.match('[0-9]{8}', season):

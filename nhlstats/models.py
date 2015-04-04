@@ -23,6 +23,7 @@ logger.debug('Loading {} ver {}'.format(__name__, __version__))
 MODELS = [
     'Arena',
     'League',
+    'SeasonType',
     'Season',
     'Conference',
     'Division',
@@ -77,18 +78,28 @@ class League(BaseModel):
         return self.name
 
 
-class Season(BaseModel):
-    # Note that order matters here! The NHL uses
-    # season type ids that we derive from this
-    # order.
-    SEASON_TYPES = [('preseason', 'Preseason'),
-                    ('regular', 'Regular'),
-                    ('playoffs', 'Playoffs')]
+class SeasonType(BaseModel):
+    """
+    Represents a season type within a league. Such a preseason, regular or
+    playoffs. These are in relation to a league because each league can have
+    arbitrarty identifiers `external_id` for each season type.
+    """
+    league = ForeignKeyField(League, related_name='season_types')
+    name = CharField()
+    external_id = IntegerField(null=True)
 
+    class Meta:
+        db_table = 'season_types'
+
+    def __unicode__(self):
+        return self.name
+
+
+class Season(BaseModel):
     league = ForeignKeyField(League, related_name='seasons',
                              on_delete='CASCADE', on_update='CASCADE')
     year = CharField()
-    type = CharField(choices=SEASON_TYPES)
+    type = ForeignKeyField(SeasonType, related_name='seasons')
 
     class Meta:
         db_table = 'seasons'
@@ -98,22 +109,8 @@ class Season(BaseModel):
             (('league', 'year', 'type'), True),
         )
 
-    @classmethod
-    def get_season_types(self):
-        """
-        Returns the short season type codes
-        """
-        return [season_type for season_type, season_type_str in self.SEASON_TYPES]
-
-    @classmethod
-    def get_season_type_id(self, season_type):
-        """
-        Returns the season type id number as used by NHL URLs
-        """
-        return Season.get_season_types().index(season_type) + 1
-
-    def __unicode__(self):
-        return self.year
+        def __unicode__(self):
+            return self.year
 
 
 class Conference(BaseModel):
