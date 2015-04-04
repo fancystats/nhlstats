@@ -1,4 +1,6 @@
+# -*- coding: utf-8 -*-
 """
+
 Models
 ======
 
@@ -86,7 +88,7 @@ class SeasonType(BaseModel):
     """
     league = ForeignKeyField(League, related_name='season_types')
     name = CharField()
-    external_id = IntegerField(null=True)
+    external_id = CharField(null=True)
 
     class Meta:
         db_table = 'season_types'

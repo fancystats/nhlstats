@@ -1,1 +1,1 @@
-[{"league": 1, "id": 1, "name": "Preseason", "external": 0}, {"league": 1, "id": 2, "name": "Regular", "external": 1}, {"league": 1, "id": 3, "name": "Playoffs", "external": 2}]
+[{"league": 1, "id": 1, "name": "Preseason", "external": "0"}, {"league": 1, "id": 2, "name": "Regular", "external": "1"}, {"league": 1, "id": 3, "name": "Playoffs", "external": "2"}]

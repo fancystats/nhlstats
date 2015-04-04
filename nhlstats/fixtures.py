@@ -1,4 +1,4 @@
-""".info('Thawing {} into {} table...'.format(fixture, table))
+"""
 
 Fixtures
 --------
@@ -19,6 +19,7 @@ FIXTURES_DIR = os.path.abspath(os.path.join(
 
 logger = logging.getLogger(__name__)
 
+
 def connect_dataset():
     """Returns a DataSet connection to the database."""
     return DataSet(os.environ.get('DATABASE_URL') or DEFAULT_SQLITE_DB)
@@ -26,6 +27,7 @@ def connect_dataset():
 
 def freeze(basedir=None, format='json'):
     """Dump the data stored in the database into a series of fixtures."""
+    ds = connect_dataset()
     logger.info('Freezing the database into fixtures...')
     if not basedir:
         basedir = FIXTURES_DIR
@@ -33,9 +35,8 @@ def freeze(basedir=None, format='json'):
     if not os.path.isdir(basedir):
         logger.warn('{} directory does not exist, creating...'.format(basedir))
         os.makedirs(basedir)
-    ds = connect_dataset()
     for name in ds.tables:
-        table = db[name]
+        table = ds[name]
         filename = os.path.join(basedir, '{}.{}'.format(name, format))
         logger.info('Freezing fixture for {} in {}...'.format(name, filename))
         ds.freeze(table.all(), format=format, filename=filename)
