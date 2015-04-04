@@ -13,8 +13,7 @@ import logging
 from .version import __version__
 
 from peewee import BooleanField, CharField, DateField, DateTimeField, \
-    ForeignKeyField, IntegerField, TextField, Model, Proxy, \
-    IntegrityError
+    ForeignKeyField, IntegerField, TextField, Model, Proxy
 
 logger = logging.getLogger(__name__)
 logger.debug('Loading {} ver {}'.format(__name__, __version__))
@@ -47,23 +46,6 @@ class BaseModel(Model):
     class Meta:
         database = db_proxy
 
-    @classmethod
-    def get_or_create(cls, **kwargs):
-        """
-        Creates a model instance if it does not exist.
-        """
-        try:
-            return cls.create(**kwargs)
-        except IntegrityError as e:
-            if logger.getEffectiveLevel() <= logging.DEBUG:
-                logger.warn(
-                    'Failure creating record, attempting to retrieve. ({})'.format(
-                        e.message
-                    )
-                )
-            # It exists, return the existing record
-            return cls.get(**kwargs)
-
 
 class Arena(BaseModel):
     name = CharField()
@@ -72,7 +54,7 @@ class Arena(BaseModel):
     state = CharField()
     country = CharField()
     postal_code = CharField()
-    #TODO: find out how we can get capacity data
+    # TODO: find out how we can get capacity data
     capacity = IntegerField(null=True)
 
     class Meta:
