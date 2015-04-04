@@ -7,7 +7,7 @@ An easy way to load and unload data from the database.
 
 .. usage::
 
-        This assumes you're starting with an empty database.
+    This assumes you're starting with an empty database.
 
     1. Make sure you have created all the database tables.
     2. Load all the fixtures using `fixtures.load()`.

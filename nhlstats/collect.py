@@ -48,8 +48,15 @@ class Collector(object):
         types, preseason, regular, and postseason. Verify our season_type
         is known.
         """
-        if season_type not in Season.get_season_types():
+        if season_type not in ['preseason', 'regular', 'playoffs']:
             raise ValueError('Season type of {} is unknown'.format(season_type))
+
+    def get_season_type_id(self, season_type):
+        return {
+            'preseason': 1,
+            'regular': 2,
+            'playoffs': 3
+        }.get(season_type)
 
     def check_season(self, season):
         """
@@ -233,7 +240,7 @@ class NHLSchedule(HTMLCollector):
         self.season = season
         self.season_type = season_type
 
-        super(NHLSchedule, self).__init__(url.format(season, Season.get_season_type_id(season_type)))
+        super(NHLSchedule, self).__init__(url.format(season, self.get_season_type_id(season_type)))
 
     def parse(self, data):
         games = []
