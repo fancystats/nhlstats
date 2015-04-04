@@ -55,17 +55,19 @@ def thaw(basedir=None):
     fixtures = os.listdir(basedir)
     logger.debug('Found {} fixtures in {}...'.format(len(fixtures), basedir))
     for fixture in fixtures:
-        if os.path.isfile(fixture):
-            filename = fixture.split('/')[-1]
-            table, format = filename.split('.')[-1]
-            if format not in ['json', 'csv']:
-                logger.warn('Unrecognized format {}, skipping...'.format(
-                    format))
-                continue
-            if table not in ds:
-                logger.warn('Table {} does not exist, skipping...'.format(
-                    table))
-                continue
-            table = ds[table]
-            logger.info('Thawing {} into {} table...'.format(fixture, table))
-            table.thaw(format=format, filename=filename, strict=True)
+        filename = os.path.join(basedir, fixture)
+        if not os.path.isfile(filename):
+            logger.warn('{} is not a file, skipping...'.format(filename))
+            continue
+        table, format = fixture.split('.', 1)
+        if format not in ['json', 'csv']:
+            logger.warn('Unrecognized format {}, skipping...'.format(
+                format))
+            continue
+        if table not in ds:
+            logger.warn('Table {} does not exist, skipping...'.format(
+                table))
+            continue
+        table = ds[table]
+        logger.info('Thawing {} into {} table...'.format(fixture, table))
+        table.thaw(format=format, filename=filename, strict=True)
