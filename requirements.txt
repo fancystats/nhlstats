@@ -1,7 +1,7 @@
 cssselect
 lxml
 nose
-peewee==2.4.6
+peewee
 pylint
 pytz
 thready

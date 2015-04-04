@@ -5,6 +5,18 @@ Fixtures
 
 An easy way to load and unload data from the database.
 
+.. usage::
+
+        This assumes you're starting with an empty database.
+
+    1. Make sure you have created all the database tables.
+    2. Load all the fixtures using `fixtures.load()`.
+    3. Make whatever inserts, updates or deletes you like to the tables.
+    4. When done, dump the new fixtures using `fixtures.dump()`.
+
+    You should now be able to drop your database, re-create it and then
+    reload your data from the newly updated fixtures.
+
 """
 
 import logging
@@ -37,6 +49,10 @@ def dump(basedir=None, format='json'):
         os.makedirs(basedir)
     for name in ds.tables:
         table = ds[name]
+        if not len(table):
+            logger.info('No data found in {} table, skipping...'.format(
+                name))
+            continue
         filename = os.path.join(basedir, '{}.{}'.format(name, format))
         logger.info('Dumping fixture for {} in {}...'.format(name, filename))
         ds.freeze(table.all(), format=format, filename=filename)
