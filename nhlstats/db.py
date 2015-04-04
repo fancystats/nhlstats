@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 
 from playhouse.db_url import connect
 
