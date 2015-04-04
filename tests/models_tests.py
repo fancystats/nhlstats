@@ -9,11 +9,11 @@ These tests focus on the storage models themselves
 
 import unittest
 
-from playhouse.db_url import connect
+from peewee import SqliteDatabase
 
 from nhlstats import models
 
-models.db_proxy.initialize(connect('sqlite://:memory:'))
+models.db_proxy.initialize(SqliteDatabase(':memory:'))
 
 
 def test_event_elapsed_time_constaint():
