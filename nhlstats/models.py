@@ -69,7 +69,7 @@ class Arena(BaseModel):
 
 
 class League(BaseModel):
-    name = CharField(unique=True)
+    name = CharField()
     abbreviation = CharField()
 
     class Meta:

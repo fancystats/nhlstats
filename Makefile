@@ -37,7 +37,7 @@ cache-index:
 
 venv:
 	test -d venv || virtualenv venv
-	source venv/bin/activate && pip install --use-wheel -r requirements.txt
+	source venv/bin/activate && pip install --quiet --use-wheel -r requirements.txt
 
 init: clean venv
 
