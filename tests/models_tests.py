@@ -1,7 +1,7 @@
 """
 
 Model Tests
------------
+===========
 
 These tests focus on the storage models themselves
 
@@ -24,7 +24,7 @@ class ModelTestCase(unittest.TestCase):
             model.create_table()
 
     def tearDown(self):
-        for model in self.MODELS:
+        for model in reversed(self.MODELS):
             model.drop_table()
 
     def create_league(self, **kwargs):

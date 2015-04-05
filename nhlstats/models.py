@@ -51,6 +51,9 @@ class BaseModel(Model):
 
 
 class Arena(BaseModel):
+    """
+    Represents a venue in which a game is played.
+    """
     name = CharField()
     street = CharField()
     city = CharField()
@@ -82,7 +85,7 @@ class League(BaseModel):
 
 class SeasonType(BaseModel):
     """
-    Represents a season type within a league. Such a preseason, regular or
+    Represents a season type within a league. Such as preseason, regular or
     playoffs. These are in relation to a league because each league can have
     arbitrarty identifiers `external_id` for each season type.
     """
@@ -157,12 +160,8 @@ class Team(BaseModel):
 
 
 class Schedule(BaseModel):
-    SCHEDULE_TYPES = [('regular', 'Regular'),
-                      ('preseason', 'Preseason')]
-
-    league = ForeignKeyField(League, related_name='schedules',
+    season = ForeignKeyField(Season, related_name='scheduled_games',
                              on_delete='CASCADE', on_update='CASCADE')
-    type = CharField(choices=SCHEDULE_TYPES)
     day = IntegerField()
     game = IntegerField()
     date = DateField()
@@ -215,7 +214,6 @@ class PlayerSkaterStat(BaseModel):
     player = ForeignKeyField(Player, related_name='skater_stats')
     season = ForeignKeyField(Season, related_name='skater_stats')
     team = ForeignKeyField(Team, related_name='skater_stats')
-    league = ForeignKeyField(League, related_name='skater_stats')
     gp = IntegerField(null=True, verbose_name='GP')
     g = IntegerField(null=True)
     a = IntegerField(null=True)
@@ -230,11 +228,6 @@ class PlayerSkaterStat(BaseModel):
     class Meta:
         db_table = 'player_skater_stats'
         order_by = ('season', 'team', 'pts')
-
-    def __unicode__(self):
-        return '{} {} ({})'.format(self.season,
-                                   self.team,
-                                   self.league)
 
     @property
     def ptspgp(self):
@@ -253,7 +246,6 @@ class PlayerGoalieStat(BaseModel):
     player = ForeignKeyField(Player, related_name='goalie_stats')
     season = ForeignKeyField(Season, related_name='goalie_stats')
     team = ForeignKeyField(Team, related_name='goalie_stats')
-    league = ForeignKeyField(League, related_name='goalie_stats')
     gpi = IntegerField(null=True, verbose_name='GPI')
     w = IntegerField(null=True)
     l = IntegerField(null=True)
@@ -267,9 +259,6 @@ class PlayerGoalieStat(BaseModel):
     class Meta:
         db_table = 'player_goalie_stats'
         order_by = ('-season', 'team', 'gpi')
-
-    def __unicode__(self):
-        return '{} {} ({})'.format(self.season, self.team, self.league)
 
     @property
     def gaa(self):
@@ -286,8 +275,8 @@ class PlayerGoalieStat(BaseModel):
 
 class Roster(BaseModel):
     """
-    A team's roster for a specific season. The relationship between a team and
-    a player.
+    Represents a team's roster for a specific season. The relationship between
+    a team and a player.
     """
     season = ForeignKeyField(Season, related_name='roster')
     team = ForeignKeyField(Team, related_name='roster')
@@ -310,17 +299,12 @@ class Coach(BaseModel):
 
 
 class Game(BaseModel):
-    GAME_TYPES = [('pre', 'Preseason'),
-                  ('reg', 'Regular'),
-                  ('post', 'Postseason')]
-
     season = ForeignKeyField(Season, related_name='games')
     arena = ForeignKeyField(Arena, related_name='games')
     attendence = IntegerField()
     home = ForeignKeyField(Team, related_name='home_games')
     road = ForeignKeyField(Team, related_name='road_games')
     report_id = CharField()
-    type = CharField(choices=GAME_TYPES)
     start = DateTimeField()
     end = DateTimeField()
 
@@ -331,8 +315,8 @@ class Game(BaseModel):
 
 class Lineup(BaseModel):
     """
-    A team's lineup for a specific game. Should probably include scratched
-    players.
+    Represents a team's lineup for a specific game. Should probably include
+    scratched players.
     """
     game = ForeignKeyField(Game)
     team = ForeignKeyField(Team)
@@ -345,7 +329,7 @@ class Lineup(BaseModel):
 
 class Event(BaseModel):
     """
-    Events that occur within a game.
+    Represents an event that occured within a game.
 
     :param game: Game in which event occured.
     : type game: Game
@@ -429,7 +413,7 @@ class Event(BaseModel):
 
 class EventPlayer(BaseModel):
     """
-    Players who were on the ice at the time of the event.
+    Represents a player who was on the ice at the time of the event.
 
     :param event: Event in which the player was on the ice.
     :type event: Event
