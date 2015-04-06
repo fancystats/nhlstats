@@ -97,6 +97,7 @@ def main(action='collect'):
     elif action == 'dropdb':
         drop_tables()
     elif action in actions:
-        raise NotImplementedError('Action "{}" is known, but not (yet?) implemented'.format(action))
+        raise NotImplementedError(
+            'Action "{}" is known, but not (yet?) implemented'.format(action))
     else:
         raise ValueError('Unknown action "{}"'.format(action))

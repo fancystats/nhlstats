@@ -46,11 +46,13 @@ db_proxy = Proxy()
 
 
 class BaseModel(Model):
+
     class Meta:
         database = db_proxy
 
 
 class Arena(BaseModel):
+
     """
     Represents a venue in which a game is played.
     """
@@ -84,6 +86,7 @@ class League(BaseModel):
 
 
 class SeasonType(BaseModel):
+
     """
     Represents a season type within a league. Such as preseason, regular or
     playoffs. These are in relation to a league because each league can have
@@ -298,6 +301,7 @@ class PlayerGoalieStat(BaseModel):
 
 
 class Roster(BaseModel):
+
     """
     Represents a team's roster for a specific season. The relationship between
     a team and a player.
@@ -338,6 +342,7 @@ class Game(BaseModel):
 
 
 class Lineup(BaseModel):
+
     """
     Represents a team's lineup for a specific game. Should probably include
     scratched players.
@@ -352,6 +357,7 @@ class Lineup(BaseModel):
 
 
 class Event(BaseModel):
+
     """
     Represents an event that occured within a game.
 
@@ -436,6 +442,7 @@ class Event(BaseModel):
 
 
 class EventPlayer(BaseModel):
+
     """
     Represents a player who was on the ice at the time of the event.
 
