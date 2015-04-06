@@ -56,6 +56,7 @@ class Arena(BaseModel):
     """
     Represents a venue in which a game is played.
     """
+
     name = CharField()
     street = CharField()
     city = CharField()
@@ -92,6 +93,7 @@ class SeasonType(BaseModel):
     playoffs. These are in relation to a league because each league can have
     arbitrarty identifiers `external_id` for each season type.
     """
+
     league = ForeignKeyField(League, related_name='season_types')
     name = CharField()
     external_id = CharField(null=True)
@@ -306,6 +308,7 @@ class Roster(BaseModel):
     Represents a team's roster for a specific season. The relationship between
     a team and a player.
     """
+
     season = ForeignKeyField(Season, related_name='roster')
     team = ForeignKeyField(Team, related_name='roster')
     player = ForeignKeyField(Player, related_name='rosters')
@@ -347,6 +350,7 @@ class Lineup(BaseModel):
     Represents a team's lineup for a specific game. Should probably include
     scratched players.
     """
+
     game = ForeignKeyField(Game)
     team = ForeignKeyField(Team)
     Player = ForeignKeyField(Player)
@@ -396,6 +400,7 @@ class Event(BaseModel):
     :param penalty_minutes: Amount of penalty minutes given for penalty.
     :type penalty_minutes: integer or None
     """
+
     STRENGTHS = [('ev', 'Even Strength'),
                  ('pp', 'Power Play'),
                  ('sh', 'Short Handed')]
@@ -453,6 +458,7 @@ class EventPlayer(BaseModel):
     :param Player: The player on the ice during the event.
     :type player: Player
     """
+
     event = ForeignKeyField(Event, related_name='players')
     team = ForeignKeyField(Team)
     player = ForeignKeyField(Player)

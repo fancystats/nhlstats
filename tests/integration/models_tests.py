@@ -1,7 +1,7 @@
 """
 
-Model Tests
-===========
+Model Integration Tests
+=======================
 
 These tests focus on the storage models themselves
 
