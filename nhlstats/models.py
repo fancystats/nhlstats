@@ -172,7 +172,7 @@ class Schedule(BaseModel):
 
     class Meta:
         db_table = 'schedules'
-        order_by = ['league', 'type', 'game']
+        order_by = ['season', 'game']
 
     def __unicode__(self):
         return '{} {} Day {} Game {}'.format(self.league.name,
@@ -208,6 +208,30 @@ class Player(BaseModel):
 
     def __unicode__(self):
         return self.name
+
+    @property
+    def height_imperial(self):
+        if self.height:
+            return '{}\'{}"'.format(self.height / 12, self.height % 12)
+        return 'N/A'
+
+    @property
+    def height_metric(self):
+        if self.height:
+            return '{}cm'.format(round(self.height * 2.54))
+        return 'N/A'
+
+    @property
+    def weight_imperial(self):
+        if self.weight:
+            return '{}lbs'.format(self.weight)
+        return 'N/A'
+
+    @property
+    def weight_metric(self):
+        if self.weight:
+            return '{}kg'.format(round(self.weight * 0.453592))
+        return 'N/A'
 
 
 class PlayerSkaterStat(BaseModel):
