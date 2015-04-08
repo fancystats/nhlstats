@@ -8,7 +8,7 @@ from nhlstats import main, actions, __version__
 
 
 if __name__ == '__main__':
-    actions_string = 'ACTION is one of {}'.format(', '.join(actions))
+    actions_string = 'ACTION is one of {}'.format(', '.join([action for action in actions if action != 'testignore']))
     parser = optparse.OptionParser(usage='usage: %prog [options] ACTION\n\n{}'.format(actions_string))
 
     parser.add_option('-v', '--verbose', dest='verbose', action='store_true', default=False,

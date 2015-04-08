@@ -276,8 +276,8 @@ class NHLSchedule(HTMLCollector):
         return games
 
     def parse_row(self, row):
-        teams = [item.text for item in row.xpath(
-            'td[@class="team"]/div[@class="teamName"]/a|td[@class="team"]/div[@class="teamName"]') if item.text]
+        teams = [item.get('rel') for item in row.xpath(
+            'td[@class="team"]/div[@class="teamName"]/a|td[@class="team"]/div[@class="teamName"]/a')]
 
         # If we don't have two teams, we must be in some header row
         if not len(teams) == 2:
@@ -304,12 +304,9 @@ class NHLSchedule(HTMLCollector):
 
             return {
                 'season': self.season,
-                'date': startDate,
-                'time': startTime,
+                'start': datetime.datetime.combine(startDate, startTime),
                 'home': teams[1],
-                'visitor': teams[0],
-                'start': startDate,
-                'type': self.season_type
+                'road': teams[0],
             }
 
     def verify(self, data):
@@ -373,7 +370,7 @@ class NHLTeams(HTMLCollector):
                 'city': team.cssselect('span.teamPlace')[0].text_content(),
                 'name': team.cssselect('span.teamCommon')[0].text_content(),
                 'url': team.cssselect('div.teamLogo>a')[0].attrib['href'],
-                'acronym': team.values()[0].split()[-1].upper()
+                'code': team.values()[0].split()[-1].upper()
             }
 
             # For some reason these teamCards show up twice, so check
