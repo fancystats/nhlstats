@@ -3,7 +3,7 @@ import logging
 from version import __version__
 
 from .db import create_tables, drop_tables
-from .models import League, Season, Team, Conference, Division, Arena
+from .models import League, Season, SeasonType, Team, Conference, Division, Arena
 from .collect import NHLSchedule, NHLTeams, NHLDivisions, NHLArena
 
 
@@ -53,8 +53,14 @@ def populate():
     """
     # In the event they don't exist, create the tables.
     create_tables()
+
     # This is NHL stats, after all, let's start by creating the NHL
-    league = League.get_or_create(name='NHL')
+    league = League.get_or_create(name='National Hockey League', abbreviation='NHL')
+
+    # Add season types
+    SeasonType.get_or_create(league=league, name='Preseason', external_id='1')
+    SeasonType.get_or_create(league=league, name='Regular', external_id='2')
+    SeasonType.get_or_create(league=league, name='Playoffs', external_id='3')
 
     # Get the latest set of division information
     divisions = NHLDivisions().scrape()
@@ -72,10 +78,11 @@ def populate():
     # Gather our seasons:
     for years in seasons:
         divisions = NHLDivisions(years).scrape()
-        for season_type, season_type_str in Season.SEASON_TYPES:
+
+        for season_type in SeasonType.select():
             Season.get_or_create(league=league, year=years, type=season_type)
 
-            for game in NHLSchedule(years, season_type).scrape():
+            for game in NHLSchedule(years, season_type.name).scrape():
                 pass
 
 
