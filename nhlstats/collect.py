@@ -276,10 +276,8 @@ class NHLSchedule(HTMLCollector):
         return games
 
     def parse_row(self, row):
-        teams = [item.get('rel') for item in row.xpath(
-            'td[@class="team"]/div[@class="teamName"]/a|td[@class="team"]/div[@class="teamName"]/a')]
+        teams = [item.get('rel') for item in row.xpath('td[@class="team"]/div[@class="teamName"]/a')]
 
-        # If we don't have two teams, we must be in some header row
         if not len(teams) == 2:
             return
         # If we have a non-breaking space, it's an Olympic team.

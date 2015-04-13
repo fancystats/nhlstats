@@ -65,7 +65,7 @@ class TestCollection(unittest.TestCase):
             'division': 'pacific',
             'url': 'http://ducks.nhl.com',
             'city': 'Anaheim',
-            'acronym': 'ANA',
+            'code': 'ANA',
             'name': 'Ducks'
         }
         assert(ducks_expected in teams)
@@ -82,45 +82,37 @@ class TestCollection(unittest.TestCase):
 
         # {'season': '20132014', 'time': datetime.time(20, 0), 'start': datetime.date(2014, 3, 16), 'visitor': 'Toronto', 'date': datetime.date(2014, 3, 16), 'home': 'Washington', 'type': 'REG'}
         # Let's find the games on March 16th.  NHL.com says there were 9 games.
-        marchSixteenth = [
-            game for game in rego if game['start'] == datetime.date(2014, 3, 16)]
+        marchSixteenth = [game for game in rego if game['start'].date() == datetime.date(2014, 3, 16)]
         assert(len(marchSixteenth) == 9)
 
         # Now just the game between the Caps and the Leafs on that day:
-        capsGame = [
-            game for game in marchSixteenth if game['home'] == 'Washington']
+        capsGame = [game for game in marchSixteenth if game['home'] == 'Washington']
         assert(len(capsGame) == 1)
 
         # Check the start time is correct.  7PM UTC is 3PM EDT
-        assert(capsGame[0]['time'] == datetime.time(19, 0))
+        assert(capsGame[0]['start'].time() == datetime.time(19, 0))
 
         # Check to make sure that the right season is set for all games.
-        self.assertListEqual(
-            [game for game in rego if game['season'] != '20132014'], [])
+        self.assertListEqual([game for game in rego if game['season'] != '20132014'], [])
 
-        playoffs = collect.NHLSchedule('20132014', 'playoffs').scrape()
+        playoffs = collect.NHLSchedule('20132014', 'Playoffs').scrape()
 
         # Check to make sure that the right season is set for all games.
-        self.assertListEqual(
-            [game for game in playoffs if game['season'] != '20132014'], [])
+        self.assertListEqual([game for game in playoffs if game['season'] != '20132014'], [])
 
         # Ensure that Boston-Montreal is the only game listed for May 1st, and that it
         # starts at 11:30 UTC.
-        mayFirst = [game for game in playoffs if game[
-            'start'] == datetime.date(2014, 5, 1)]
+        mayFirst = [game for game in playoffs if game['start'].date() == datetime.date(2014, 5, 1)]
         assert(len(mayFirst) == 1)
-        assert(mayFirst[0]['visitor'] ==
-               u'Montr\xe9al' and mayFirst[0]['home'] == 'Boston')
-        assert(mayFirst[0]['time'] == datetime.time(23, 30))
+        assert(mayFirst[0]['road'] == u'Montr\xe9al' and mayFirst[0]['home'] == 'Boston')
+        assert(mayFirst[0]['start'].time() == datetime.time(23, 30))
 
         # Let's try getting some data from the first post-lockout pre-season
-        postLockoutPre = collect.NHLSchedule('20052006', 'preseason').scrape()
-        sepTwentySixth = [game for game in postLockoutPre if game[
-            'start'] == datetime.date(2005, 9, 26)]
+        postLockoutPre = collect.NHLSchedule('20052006', 'Preseason').scrape()
+        sepTwentySixth = [game for game in postLockoutPre if game['start'].date() == datetime.date(2005, 9, 26)]
         assert(len(sepTwentySixth) == 1)
-        assert(sepTwentySixth[0]['visitor'] == 'Vancouver' and sepTwentySixth[
-               0]['home'] == 'Calgary')
-        assert(sepTwentySixth[0]['time'] == datetime.time(1, 0))
+        assert(sepTwentySixth[0]['road'] == 'Vancouver' and sepTwentySixth[0]['home'] == 'Calgary')
+        assert(sepTwentySixth[0]['start'].time() == datetime.time(1, 0))
 
         # And one final thing, make sure we can get the first post lockout season and there
         # are 82 games per team.
@@ -136,8 +128,7 @@ class TestCollection(unittest.TestCase):
         # First ensure every result has a report id.  We don't want any without.
         # Some games in a season won't have them yet if it's active, but that's
         # expected as they aren't daded until close to the game.
-        self.assertListEqual(
-            [game for game in reports if not game.get('reportid')], [])
+        self.assertListEqual([game for game in reports if not game.get('reportid')], [])
 
         # Since this is a completed season, however, we expect every game should
         # have one
@@ -145,8 +136,7 @@ class TestCollection(unittest.TestCase):
 
         # Let's grab the March 16th Caps game like we did in the schedule tests
         # and ensure we have the expected report id for it
-        capsGame = [game for game in reports if game['start'] == datetime.date(
-            2014, 3, 16) and game['home'] == 'Washington']
+        capsGame = [game for game in reports if game['start'] == datetime.datetime(2014, 3, 16, 19, 0) and game['home'] == 'Washington']
         assert(len(capsGame) == 1)
         assert(capsGame[0]['reportid'] == '021014')
 
@@ -156,10 +146,8 @@ class TestCollection(unittest.TestCase):
 
         # Let's check the post lockout post season, and ensure we can retrieve
         # a specific game id
-        postLockoutPostSeason = collect.NHLGameReports(
-            '20052006', 'playoffs').scrape()
-        yeOldePlayoffGame = [game for game in postLockoutPostSeason if game[
-            'start'] == datetime.date(2006, 4, 24) and game['home'] == 'Carolina']
+        postLockoutPostSeason = collect.NHLGameReports('20052006', 'Playoffs').scrape()
+        yeOldePlayoffGame = [game for game in postLockoutPostSeason if game['start'] == datetime.datetime(2006, 4, 24, 23, 0) and game['home'] == 'Carolina']
 
         # Make sure we got just one game:
         assert(len(yeOldePlayoffGame) == 1)
