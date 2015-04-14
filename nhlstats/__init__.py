@@ -1,4 +1,5 @@
 import logging
+import datetime
 
 from version import __version__
 
@@ -31,20 +32,23 @@ seasons = [
 
 
 def get_data_for_game(game):
-    pass
+    try:
+        print game
+    except:
+        logger.exception('Unable to print game')
 
 
-def get_data_for_games(games=[]):
+def get_data_for_games(games):
+    if games is None:
+        games = []
+
+    counter = 0
+
     for game in games:
+        counter += 1
         get_data_for_game(game)
 
-
-def get_games(active=True, beginning=None, end=None):
-    """
-    Return a tuple of games.  Updates gets finished games to check for updated stats,
-    if False (default) it returns active games. beginning and end allow you set a range
-    for the search, with no end indicating until the time.
-    """
+    print counter
 
 
 def populate():
@@ -87,7 +91,7 @@ def populate():
                 game['home'] = Team.get(code=game['home'])
                 game['road'] = Team.get(code=game['road'])
                 game['season'] = season
-                Game.get_or_create(**game)
+                Game.get_or_create(**game).save()
 
 
 def main(action='collect'):
@@ -97,10 +101,11 @@ def main(action='collect'):
     logger.debug('Dispatching action {}'.format(action))
     # By default, we collect info on current games
     if action == 'collect':
-        get_data_for_games(get_games(active=True))
+        connect_db()
+        get_data_for_games(Game.get_active_games())
     # Otherwise we can look to update finished games
     elif action == 'update':
-        get_data_for_games(get_games(active=False))
+        get_data_for_games(Game.get_games_in_date_range())
     elif action == 'populate':
         populate()
     elif action == 'syncdb':

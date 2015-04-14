@@ -11,6 +11,7 @@ http://www.nhl.com/scores/htmlreports/20132014/PL021195.HTM
 """
 
 import logging
+import datetime
 
 from .version import __version__
 
@@ -346,6 +347,30 @@ class Game(BaseModel):
     class Meta:
         db_table = 'games'
         order_by = ('start',)
+
+    def __repr__(self):
+        return '{} at {} - {}(Game ID: {})'.format(
+            self.road.name.encode('utf-8'),
+            self.home.name.encode('utf-8'),
+            self.start.strftime('%A, %d. %B %Y %H:%M %Z'),
+            self.report_id if self.report_id else 'Unknown'
+        )
+
+    @classmethod
+    def get_active_games(cls):
+        """
+        Returns only games that are currently being played
+        """
+        return cls.select().where((Game.start <= datetime.datetime.now()) & Game.end.is_null(True))
+
+    @classmethod
+    def get_games_in_date_range(cls, start=None, end=None):
+        """
+        Returns only games that start between the start and
+        end dates, or either can be None to make the query
+        open-ended on one side.
+        """
+        return cls.select().where((Game.start >= start) & (Game.start <= end))
 
 
 class Lineup(BaseModel):
