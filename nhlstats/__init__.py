@@ -1,3 +1,7 @@
+import sys
+import re
+import time
+import urllib2
 import logging
 import datetime
 
@@ -5,7 +9,7 @@ from version import __version__
 
 from .db import create_tables, drop_tables, connect_db
 from .models import League, Season, SeasonType, Team, Conference, Division, Arena, Game
-from .collect import NHLSchedule, NHLTeams, NHLDivisions, NHLArena
+from .collect import NHLTeams, NHLDivisions, NHLArena, NHLGameReports, NHLEvents
 
 
 logger = logging.getLogger(__name__)
@@ -24,18 +28,51 @@ actions = [
     'testignore',   # Allows the bin app to be run without calling into here.
 ]
 
-# This represents seasons we officially support. Should eventually be
-# supported by external configuration of seasons to collect
+
+# TODO: Proper exception handling and clean up
+# TODO: retry at least once on IncompleteRead
+# TODO: Handle timezones.
+# TODO: Allow for multiple levels of verbosity, squelch db stuff in normal debug
+# TODO: Add ability to specify current time via CLI/env
+# TODO: Add ability to specify wait timer when grabbing new pages via CLI/env
+# TODO: Add ability to specify seasons to collect via CLI/env
+# TODO: Make logging a pass through by default in the library itself.
 seasons = [
     '20132014'
 ]
 
 
 def get_data_for_game(game):
-    try:
-        print game
-    except:
-        logger.exception('Unable to print game')
+    events = NHLEvents(game.season.year, game.report_id)
+
+    for event in events.scrape():
+        if event['event'] == 'GEND':
+            # TODO: Inevitably there are some bugs here - we don't consider what happens when a game runs past midnight or somehow starts early in the AM
+            time_match = re.match('Game End\- Local time\: (?P<hour>[0-9]{1,2})\:(?P<minute>[0-9]{2}) (?P<timezone>[A-Z]{3})', event['description'])
+
+            if time_match:
+                try:
+                    game.end = datetime.datetime.strptime(
+                        '{}-{:02d}-{:02d} {:02d}:{}'.format(
+                            game.start.year,
+                            int(game.start.month),
+                            int(game.start.day),
+                            int(time_match.group('hour')),
+                            time_match.group('minute'),
+                            time_match.group('timezone')
+                        ),
+                        '%Y-%m-%d %I:%M'
+                    )
+                except ValueError:
+                    # TODO: DO NOT CHECK THIS IN!!!!!!
+                    game.end = datetime.datetime(2000, 01, 01, 1, 1, 1)
+                game.save()
+            else:
+                raise ValueError('Unable to parse GEND')
+
+    if not events.loaded_from_cache:
+        logger.warning('Waiting to download to be polite.')
+        time.sleep(5)
 
 
 def get_data_for_games(games):
@@ -45,10 +82,20 @@ def get_data_for_games(games):
     counter = 0
 
     for game in games:
-        counter += 1
-        get_data_for_game(game)
+        #if game.season.type.name not in ['Regular', 'Playoffs']:
+        #    logger.warn('Skipping non-regular season {}'.format(game))
+        #    continue
 
-    print counter
+        counter += 1
+        try:
+            get_data_for_game(game)
+        except urllib2.HTTPError:
+            logger.exception('Unable to retrieve game report for {}'.format(game))
+        except:
+            logger.exception('Error getting data for {}'.format(game))
+            sys.exit(1)
+
+    logger.debug('Processed {} games'.format(counter))
 
 
 def populate():
@@ -87,7 +134,7 @@ def populate():
         for season_type in SeasonType.select():
             season = Season.get_or_create(league=league, year=years, type=season_type)
 
-            for game in NHLSchedule(years, season_type.name).scrape():
+            for game in NHLGameReports(years, season_type.name).scrape():
                 game['home'] = Team.get(code=game['home'])
                 game['road'] = Team.get(code=game['road'])
                 game['season'] = season

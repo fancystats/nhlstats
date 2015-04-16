@@ -7,6 +7,7 @@ Collect concerns itself with the screen scraping functionality.
 
 import os
 import re
+import sys
 import pytz
 import json
 import logging
@@ -39,10 +40,13 @@ class Collector(object):
     HTMLCollector and JSONCollector which derive from this
     should be used.
     """
+    class HTTPError(urllib2.HTTPError):
+        pass
 
     def __init__(self, url, cache_dir='cache'):
         self.url = url
         self.cache_dir = cache_dir
+        self.loaded_from_cache = False
 
     def check_season_type(self, season_type):
         """
@@ -67,8 +71,7 @@ class Collector(object):
         the correct format.
         """
         if not re.match('[0-9]{8}', season):
-            raise ValueError(
-                'Season "{}" is not of the correct format, which is two directly concatonated YYYY values, ie 20132014'.format(season))
+            raise ValueError('Season "{}" is not of the correct format, which is two directly concatonated YYYY values, ie 20132014'.format(season))
 
     def convert_datetime_to_utc(self, date, tz=pytz.timezone('US/Eastern')):
         """
@@ -104,13 +107,13 @@ class Collector(object):
         local_path = self.url_to_filename(url)
         if not os.path.exists(local_path):
             try:
-                logger.debug(
-                    'Unable to load {} from cache ({}), downloading.'.format(url, local_path))
+                logger.debug('Unable to load {} from cache ({}), downloading.'.format(url, local_path))
                 self.store_cache(url, urllib2.urlopen(url).read())
             except (urllib2.HTTPError, urllib2.URLError):
                 logger.error('Unable to load page at {}'.format(url))
                 raise
         else:
+            self.load_from_cache = True
             logger.debug('Loaded {} from cache ({})'.format(
                 url, local_path
             ))
@@ -319,8 +322,7 @@ class NHLGameReports(NHLSchedule):
     Collects GameReport ids from an NHL Schedule
     """
     # Will match the type to group 1 and the game id to group 2
-    GAME_ID_REGEX = re.compile(
-        'http://www.nhl.com/gamecenter/en/(recap|preview)\?id=[0-9]{4}([0-9]+)')
+    GAME_ID_REGEX = re.compile('http://www.nhl.com/gamecenter/en/(recap|preview)\?id=[0-9]{4}([0-9]+)')
 
     def parse(self, data):
         games = []
@@ -340,7 +342,7 @@ class NHLGameReports(NHLSchedule):
                         break
 
                 if idNum:
-                    game['reportid'] = idNum
+                    game['report_id'] = idNum
                     games.append(game)
 
         return games
