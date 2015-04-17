@@ -79,23 +79,22 @@ def get_data_for_games(games):
     if games is None:
         games = []
 
-    counter = 0
+    success_counter = 0
+    failure_counter = 0
 
     for game in games:
-        #if game.season.type.name not in ['Regular', 'Playoffs']:
-        #    logger.warn('Skipping non-regular season {}'.format(game))
-        #    continue
-
-        counter += 1
         try:
             get_data_for_game(game)
+            success_counter += 1
         except urllib2.HTTPError:
-            logger.exception('Unable to retrieve game report for {}'.format(game))
+            logger.warning('Unable to retrieve game report for {}'.format(game))
+            failure_counter += 1
         except:
             logger.exception('Error getting data for {}'.format(game))
             sys.exit(1)
 
-    logger.debug('Processed {} games'.format(counter))
+    logger.debug('Processed {} games'.format(success_counter))
+    logger.debug('Failed to process {} games'.format(failure_counter))
 
 
 def populate():
@@ -152,6 +151,8 @@ def main(action='collect'):
         get_data_for_games(Game.get_active_games())
     # Otherwise we can look to update finished games
     elif action == 'update':
+        connect_db()
+        get_data_for_games(Game.get_orphaned_games())
         get_data_for_games(Game.get_games_in_date_range())
     elif action == 'populate':
         populate()

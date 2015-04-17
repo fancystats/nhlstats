@@ -46,6 +46,7 @@ class TestModelPlayer(unittest.TestCase):
         self.assertEqual(p.weight_metric, '79.0kg')
 
 
+<<<<<<< HEAD
 class TestModelPlayerSkaterStat(unittest.TestCase):
 
     def test_ptspg(self):
@@ -82,3 +83,9 @@ class TestModelPlayerGoalieStat(unittest.TestCase):
         self.assertEqual(pgs.svpct, '0.850')
         pgs = PlayerGoalieStat(ga=1, sha=100)
         self.assertEqual(pgs.svpct, '0.990')
+=======
+class TestModelGame(unittest.TestCase):
+
+    def test_get_active(self):
+        raise
+>>>>>>> Further refined concept of active games, we now only concern ourselves with games not finished less than 24 hours old, introducing the concept of orphaned games (of which there certainly are some, especially in the pre-season, thanks NHL!)

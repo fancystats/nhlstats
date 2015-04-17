@@ -11,7 +11,7 @@ http://www.nhl.com/scores/htmlreports/20132014/PL021195.HTM
 """
 
 import logging
-import datetime
+from datetime import datetime, timedelta
 
 from .version import __version__
 
@@ -359,9 +359,29 @@ class Game(BaseModel):
     @classmethod
     def get_active_games(cls):
         """
-        Returns only games that are currently being played
+        Returns only games that are currently being played.
+        - The start is before now
+        - The difference betweeen now and start is <= 24 hours
+        - There is no end marked for the game.
         """
-        return cls.select().where((Game.start <= datetime.datetime.now()) & Game.end.is_null(True))
+        return cls.select().where(
+            (Game.start <= datetime.now()) &
+            (Game.start >= (datetime.now() - timedelta(days=1))) &
+            Game.end.is_null(True)
+        )
+
+    @classmethod
+    def get_orphaned_games(cls):
+        """
+        Gets games that should be, but presumably never will,
+        be marked finished. Same as get_active_games, except:
+        - The difference between now and start is > 24 hours
+        """
+        return cls.select().where(
+            (Game.start <= datetime.now()) &
+            (Game.start < (datetime.now() - timedelta(days=1))) &
+            Game.end.is_null(True)
+        )
 
     @classmethod
     def get_games_in_date_range(cls, start=None, end=None):
