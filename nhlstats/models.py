@@ -260,14 +260,16 @@ class PlayerSkaterStat(BaseModel):
 
     @property
     def ptspgp(self):
+        """Points per game played"""
         if self.gp and self.pts:
-            return '%.2f' % float(self.gp) / self.pts
+            return '{:.2f}'.format(float(self.pts) / self.gp)
         return None
 
     @property
     def shotpct(self):
+        """Shooting percentage"""
         if self.shots and self.g:
-            return '%.3f' % float(self.shots) / self.g
+            return '{:.1f}'.format((float(self.g) / self.shots) * 100)
         return None
 
 
@@ -291,15 +293,17 @@ class PlayerGoalieStat(BaseModel):
 
     @property
     def gaa(self):
+        """Goals against average"""
         if self.ga and self.min:
-            return '%.2f' % self.ga / (self.min / 60.0)
+            return '{:.2f}'.format(self.ga / (self.min / 60.0))
         return None
 
     @property
     def svpct(self):
+        """save percentage"""
         if self.ga and self.sha:
-            return '%.3f' % (1 - self.ga / float(self.sha))
-        return None
+            return '{:.3f}'.format(1 - self.ga / float(self.sha))
+        return None.format
 
 
 class Roster(BaseModel):
