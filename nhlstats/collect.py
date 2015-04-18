@@ -16,7 +16,6 @@ from hashlib import sha1
 from lxml.html import parse
 
 from .version import __version__
-from .models import Season
 
 logger = logging.getLogger(__name__)
 logger.debug('Loading {} ver {}'.format(__name__, __version__))
@@ -51,15 +50,15 @@ class Collector(object):
         types, preseason, regular, and postseason. Verify our season_type
         is known.
         """
-        if season_type not in ['preseason', 'regular', 'playoffs']:
+        if not self.get_season_type_id(season_type):
             raise ValueError(
                 'Season type of {} is unknown'.format(season_type))
 
     def get_season_type_id(self, season_type):
         return {
-            'preseason': 1,
-            'regular': 2,
-            'playoffs': 3
+            'Preseason': 1,
+            'Regular': 2,
+            'Playoffs': 3
         }.get(season_type)
 
     def check_season(self, season):
@@ -256,14 +255,13 @@ class NHLSchedule(HTMLCollector):
     """
     SCHEDULE_ROW_XPATH = '//table[@class="data schedTbl"]/tbody/tr'
 
-    def __init__(self, season, season_type='regular', url='http://www.nhl.com/ice/schedulebyseason.htm?season={}&gameType={}&team=&network=&venue='):
+    def __init__(self, season, season_type='Regular', url='http://www.nhl.com/ice/schedulebyseason.htm?season={}&gameType={}&team=&network=&venue='):
         self.check_season(season)
         self.check_season_type(season_type)
         self.season = season
         self.season_type = season_type
 
-        super(NHLSchedule, self).__init__(
-            url.format(season, self.get_season_type_id(season_type)))
+        super(NHLSchedule, self).__init__(url.format(season, self.get_season_type_id(season_type)))
 
     def parse(self, data):
         games = []
@@ -278,8 +276,8 @@ class NHLSchedule(HTMLCollector):
         return games
 
     def parse_row(self, row):
-        teams = [item.text for item in row.xpath(
-            'td[@class="team"]/div[@class="teamName"]/a|td[@class="team"]/div[@class="teamName"]') if item.text]
+        teams = [item.get('rel') for item in row.xpath(
+            'td[@class="team"]/div[@class="teamName"]/a|td[@class="team"]/div[@class="teamName"]/a')]
 
         # If we don't have two teams, we must be in some header row
         if not len(teams) == 2:
@@ -306,12 +304,9 @@ class NHLSchedule(HTMLCollector):
 
             return {
                 'season': self.season,
-                'date': startDate,
-                'time': startTime,
+                'start': datetime.datetime.combine(startDate, startTime),
                 'home': teams[1],
-                'visitor': teams[0],
-                'start': startDate,
-                'type': self.season_type
+                'road': teams[0],
             }
 
     def verify(self, data):
@@ -375,7 +370,7 @@ class NHLTeams(HTMLCollector):
                 'city': team.cssselect('span.teamPlace')[0].text_content(),
                 'name': team.cssselect('span.teamCommon')[0].text_content(),
                 'url': team.cssselect('div.teamLogo>a')[0].attrib['href'],
-                'acronym': team.values()[0].split()[-1].upper()
+                'code': team.values()[0].split()[-1].upper()
             }
 
             # For some reason these teamCards show up twice, so check

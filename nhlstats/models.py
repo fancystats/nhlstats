@@ -153,7 +153,7 @@ class Team(BaseModel):
     division = ForeignKeyField(Division, related_name='teams')
     city = CharField()
     name = CharField()
-    acronym = CharField()
+    code = CharField()
     url = CharField()
 
     class Meta:
@@ -335,13 +335,13 @@ class Coach(BaseModel):
 
 class Game(BaseModel):
     season = ForeignKeyField(Season, related_name='games')
-    arena = ForeignKeyField(Arena, related_name='games')
-    attendence = IntegerField()
+    arena = ForeignKeyField(Arena, related_name='games', null=True)
+    attendence = IntegerField(null=True)
     home = ForeignKeyField(Team, related_name='home_games')
     road = ForeignKeyField(Team, related_name='road_games')
-    report_id = CharField()
+    report_id = CharField(null=True)
     start = DateTimeField()
-    end = DateTimeField()
+    end = DateTimeField(null=True)
 
     class Meta:
         db_table = 'games'

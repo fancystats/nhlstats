@@ -30,7 +30,7 @@ test: venv develop
 	source venv/bin/activate && nosetests
 
 check: venv
-	source venv/bin/activate && find . -name \*.py -not -path "./venv*" | grep -v "_tests.py$" | xargs pylint --errors-only --reports=n --generated-members=name
+	. venv/bin/activate && find . -name \*.py -not -path "./venv*" | grep -v _tests\.py$ | xargs pylint --errors-only --reports=n --generated-members=name
 
 cache-index:
 	echo > cache/index.html && find cache/* | grep -v index.html | cut -d / -f 2 | xargs -I {} echo "<a href=\"{}\">{}</a><br />" >> cache/index.html

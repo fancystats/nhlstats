@@ -2,8 +2,8 @@ import logging
 
 from version import __version__
 
-from .db import create_tables, drop_tables
-from .models import League, Season, Team, Conference, Division, Arena
+from .db import create_tables, drop_tables, connect_db
+from .models import League, Season, SeasonType, Team, Conference, Division, Arena, Game
 from .collect import NHLSchedule, NHLTeams, NHLDivisions, NHLArena
 
 
@@ -19,6 +19,7 @@ actions = [
     'populate',
     'syncdb',
     'dropdb',
+    'shell',
     'testignore',   # Allows the bin app to be run without calling into here.
 ]
 
@@ -53,8 +54,14 @@ def populate():
     """
     # In the event they don't exist, create the tables.
     create_tables()
+
     # This is NHL stats, after all, let's start by creating the NHL
-    league = League.get_or_create(name='NHL')
+    league = League.get_or_create(name='National Hockey League', abbreviation='NHL')
+
+    # Add season types
+    SeasonType.get_or_create(league=league, name='Preseason', external_id='1')
+    SeasonType.get_or_create(league=league, name='Regular', external_id='2')
+    SeasonType.get_or_create(league=league, name='Playoffs', external_id='3')
 
     # Get the latest set of division information
     divisions = NHLDivisions().scrape()
@@ -67,16 +74,20 @@ def populate():
         # Convert the textual divison name to a Division model
         team['division'] = Division.get(Division.name ** team['division'])
         Team.get_or_create(**team)
-        Arena.get_or_create(**NHLArena(team['acronym']).scrape())
+        Arena.get_or_create(**NHLArena(team['code']).scrape())
 
     # Gather our seasons:
     for years in seasons:
         divisions = NHLDivisions(years).scrape()
-        for season_type, season_type_str in Season.SEASON_TYPES:
-            Season.get_or_create(league=league, year=years, type=season_type)
 
-            for game in NHLSchedule(years, season_type).scrape():
-                pass
+        for season_type in SeasonType.select():
+            season = Season.get_or_create(league=league, year=years, type=season_type)
+
+            for game in NHLSchedule(years, season_type.name).scrape():
+                game['home'] = Team.get(code=game['home'])
+                game['road'] = Team.get(code=game['road'])
+                game['season'] = season
+                Game.get_or_create(**game)
 
 
 def main(action='collect'):
@@ -96,6 +107,11 @@ def main(action='collect'):
         create_tables()
     elif action == 'dropdb':
         drop_tables()
+    elif action == 'shell':
+        connect_db()
+        # Ghetto ass shell command!
+        # TODO: Get a more respectable shell
+        import pdb; pdb.set_trace()
     elif action in actions:
         raise NotImplementedError(
             'Action "{}" is known, but not (yet?) implemented'.format(action))
