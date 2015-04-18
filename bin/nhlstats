@@ -12,10 +12,15 @@ if __name__ == '__main__':
     parser = optparse.OptionParser(
         usage='usage: %prog [options] ACTION\n\n{}'.format(actions_string))
 
-    parser.add_option('-v', '--verbose', dest='verbose', action='store_true', default=False,
-                      help='enable verbose logging')
-    parser.add_option('-V', '--version', dest='version', action='store_true', default=False,
-                      help='display version information and exit')
+    parser.add_option(
+        '-v', '--verbose', dest='verbose', action='store_true', default=False,
+        help='enable verbose logging'
+    )
+
+    parser.add_option(
+        '-V', '--version', dest='version', action='store_true', default=False,
+        help='display version information and exit'
+    )
 
     (options, args) = parser.parse_args()
 
@@ -36,8 +41,11 @@ if __name__ == '__main__':
     if options.verbose:
         logLevel = logging.DEBUG
 
-    logging.basicConfig(name=__name__, level=logLevel,
-                        format='%(asctime)s-%(levelname)s-%(name)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+    logging.basicConfig(
+        name=__name__, level=logLevel,
+        format='%(asctime)s-%(levelname)s-%(name)s: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
     logging.debug('Setting loglevel to DEBUG')
 
     if args[0].lower() != 'testignore':

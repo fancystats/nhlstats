@@ -120,8 +120,8 @@ class Season(BaseModel):
             (('league', 'year', 'type'), True),
         )
 
-        def __unicode__(self):
-            return self.year
+    def __unicode__(self):
+        return self.year
 
 
 class Conference(BaseModel):
@@ -181,10 +181,12 @@ class Schedule(BaseModel):
         order_by = ['season', 'game']
 
     def __unicode__(self):
-        return '{} {} Day {} Game {}'.format(self.league.name,
-                                             self.type,
+        # pylint: disable=no-member
+        return '{} {} Day {} Game {}'.format(self.season.league.name,
+                                             self.season.type.name,
                                              self.day,
                                              self.game)
+        # pylint: enable=no-member
 
 
 class Player(BaseModel):
@@ -349,12 +351,14 @@ class Game(BaseModel):
         order_by = ('start',)
 
     def __repr__(self):
+        # pylint: disable=no-member
         return '{} at {} - {}(Game ID: {})'.format(
             self.road.name.encode('utf-8'),
             self.home.name.encode('utf-8'),
             self.start.strftime('%A, %d. %B %Y %H:%M %Z'),
             self.report_id if self.report_id else 'Unknown'
         )
+        # pylint: enable=no-member
 
     @classmethod
     def get_active_games(cls):

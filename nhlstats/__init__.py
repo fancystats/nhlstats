@@ -8,8 +8,10 @@ import datetime
 from version import __version__
 
 from .db import create_tables, drop_tables, connect_db
-from .models import League, Season, SeasonType, Team, Conference, Division, Arena, Game
-from .collect import NHLTeams, NHLDivisions, NHLArena, NHLGameReports, NHLEvents
+from .models import League, Season, SeasonType, Team, Conference, \
+                    Division, Arena, Game
+from .collect import NHLTeams, NHLDivisions, NHLArena, NHLGameReports, \
+                     NHLEvents
 
 
 logger = logging.getLogger(__name__)
@@ -32,7 +34,7 @@ actions = [
 # TODO: Proper exception handling and clean up
 # TODO: retry at least once on IncompleteRead
 # TODO: Handle timezones.
-# TODO: Allow for multiple levels of verbosity, squelch db stuff in normal debug
+# TODO: Allow for multiple levels of verbosity, squelch db stuff in debug
 # TODO: Add ability to specify current time via CLI/env
 # TODO: Add ability to specify wait timer when grabbing new pages via CLI/env
 # TODO: Add ability to specify seasons to collect via CLI/env
@@ -47,8 +49,15 @@ def get_data_for_game(game):
 
     for event in events.scrape():
         if event['event'] == 'GEND':
-            # TODO: Inevitably there are some bugs here - we don't consider what happens when a game runs past midnight or somehow starts early in the AM
-            time_match = re.match('Game End\- Local time\: (?P<hour>[0-9]{1,2})\:(?P<minute>[0-9]{2}) (?P<timezone>[A-Z]{3})', event['description'])
+            # TODO: Inevitably there are some bugs here - we don't consider
+            # what happens when a game runs past midnight or somehow starts
+            # early in the AM - but this lets us test basic stuff
+            time_match = re.match(
+                'Game End\- Local time\: '
+                '(?P<hour>[0-9]{1,2})\:(?P<minute>[0-9]{2}) '
+                '(?P<timezone>[A-Z]{3})',
+                event['description']
+            )
 
             if time_match:
                 try:
@@ -59,7 +68,6 @@ def get_data_for_game(game):
                             int(game.start.day),
                             int(time_match.group('hour')),
                             time_match.group('minute'),
-                            time_match.group('timezone')
                         ),
                         '%Y-%m-%d %I:%M'
                     )
@@ -87,7 +95,9 @@ def get_data_for_games(games):
             get_data_for_game(game)
             success_counter += 1
         except urllib2.HTTPError:
-            logger.warning('Unable to retrieve game report for {}'.format(game))
+            logger.warning(
+                'Unable to retrieve game report for {}'.format(game)
+            )
             failure_counter += 1
         except:
             logger.exception('Error getting data for {}'.format(game))
@@ -106,7 +116,10 @@ def populate():
     create_tables()
 
     # This is NHL stats, after all, let's start by creating the NHL
-    league = League.get_or_create(name='National Hockey League', abbreviation='NHL')
+    league = League.get_or_create(
+        name='National Hockey League',
+        abbreviation='NHL'
+    )
 
     # Add season types
     SeasonType.get_or_create(league=league, name='Preseason', external_id='1')
@@ -131,7 +144,11 @@ def populate():
         divisions = NHLDivisions(years).scrape()
 
         for season_type in SeasonType.select():
-            season = Season.get_or_create(league=league, year=years, type=season_type)
+            season = Season.get_or_create(
+                league=league,
+                year=years,
+                type=season_type
+            )
 
             for game in NHLGameReports(years, season_type.name).scrape():
                 game['home'] = Team.get(code=game['home'])

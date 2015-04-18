@@ -7,7 +7,6 @@ Collect concerns itself with the screen scraping functionality.
 
 import os
 import re
-import sys
 import pytz
 import json
 import logging
@@ -20,6 +19,14 @@ from .version import __version__
 
 logger = logging.getLogger(__name__)
 logger.debug('Loading {} ver {}'.format(__name__, __version__))
+
+
+# Scraping URLs:
+ARENA_URL = 'http://www.nhl.com/ice/ajax/teammapmodal?team={}'
+DIVISION_URL = 'http://www.nhl.com/ice/standings.htm?season={}&type=DIV'
+SCHEDULE_URL = 'http://www.nhl.com/ice/schedulebyseason.htm?season={}&gameType={}&team=&network=&venue='
+EVENT_LOCATION_URL = 'http://live.nhl.com/GameData/{}/{}/PlayByPlay.json'
+EVENT_URL = 'http://www.nhl.com/scores/htmlreports/{}/PL{}.HTM'
 
 
 class UnexpectedPageContents(Exception):
@@ -71,11 +78,15 @@ class Collector(object):
         the correct format.
         """
         if not re.match('[0-9]{8}', season):
-            raise ValueError('Season "{}" is not of the correct format, which is two directly concatonated YYYY values, ie 20132014'.format(season))
+            raise ValueError(
+                'Season "{}" is not of the correct format, which is two'
+                'directly concatonated YYYY values, ie 20132014'.format(season)
+            )
 
     def convert_datetime_to_utc(self, date, tz=pytz.timezone('US/Eastern')):
         """
-        Given a datetime object, convert it to utc from tz (defaults to US/Eastern)
+        Given a datetime object, convert it to utc from tz
+        (defaults to US/Eastern)
         """
         return tz.localize(date).astimezone(pytz.timezone('UTC'))
 
@@ -107,13 +118,17 @@ class Collector(object):
         local_path = self.url_to_filename(url)
         if not os.path.exists(local_path):
             try:
-                logger.debug('Unable to load {} from cache ({}), downloading.'.format(url, local_path))
+                logger.debug(
+                    'Unable to load {} from cache ({}), downloading.'.format(
+                        url, local_path
+                    )
+                )
                 self.store_cache(url, urllib2.urlopen(url).read())
             except (urllib2.HTTPError, urllib2.URLError):
                 logger.error('Unable to load page at {}'.format(url))
                 raise
         else:
-            self.load_from_cache = True
+            self.loaded_from_cache = True
             logger.debug('Loaded {} from cache ({})'.format(
                 url, local_path
             ))
@@ -173,13 +188,19 @@ class NHLArena(HTMLCollector):
     This retrieves information on an arena from the NHL
     """
 
-    def __init__(self, team, url='http://www.nhl.com/ice/ajax/teammapmodal?team={}'):
+    def __init__(self, team, url=ARENA_URL):
         super(NHLArena, self).__init__(url.format(team))
 
     def parse(self, data):
         # long re is long
         info = re.compile(
-            '<div style="font-weight: normal; font-size: 12px; font-family: arial,helvetica;"><b>(?P<name>[\w\s\-\,\.\&À-ú]+)</b><br />(?P<street>[\w\s\-\,\.\&À-ú]+)<br />(?P<city>[\w\s\-\,\.\&À-ú]+), (?P<state>[A-Z]{2}), (?P<country>[\w\s\-\,\.\&À-ú]+)  (?P<postal_code>[\w\s\-\,\.\&]+)<br /></div>')
+            '<div style="font-weight: normal; font-size: 12px; font-family: '
+            'arial,helvetica;"><b>(?P<name>[\w\s\-\,\.\&À-ú]+)</b><br />'
+            '(?P<street>[\w\s\-\,\.\&À-ú]+)<br />'
+            '(?P<city>[\w\s\-\,\.\&À-ú]+), '
+            '(?P<state>[A-Z]{2}), (?P<country>[\w\s\-\,\.\&À-ú]+)  '
+            '(?P<postal_code>[\w\s\-\,\.\&]+)<br /></div>'
+        )
 
         return re.search(info, data.text_content()).groupdict()
 
@@ -192,7 +213,7 @@ class NHLDivisions(HTMLCollector):
     scraping the conferences, divisions, teams.
     """
 
-    def __init__(self, season=None, url='http://www.nhl.com/ice/standings.htm?season={}&type=DIV'):
+    def __init__(self, season=None, url=DIVISION_URL):
         if season:
             self.check_season(season)
         else:
@@ -219,13 +240,23 @@ class NHLDivisions(HTMLCollector):
 
         for team in teams:
             i += 1
-            # An exception to our policy of using '{}'.format(foo) occurs here, as
-            # for some reason this throws unicode errors, in a way I don't care
-            # to further investigate beyond trying expected fixes.
+            # An exception to our policy of using '{}'.format(foo)
+            # occurs here, as for some reason this throws unicode
+            # errors, in a way I don't care to further investigate
+            # beyond trying expected fixes.
             division = data.xpath(
-                '//*[text()="%s"]/parent::td/parent::tr/parent::tbody/preceding-sibling::thead/tr[1]/th[@abbr="DIV"]' % team)[0].text
-            conference = [item.get('class').replace(conferenceText, '') for item in data.xpath(
-                '//*[text()="%s"]/parent::td/parent::tr/parent::tbody/parent::table/preceding-sibling::div[starts-with(@class, "%s")]' % (team, conferenceText))][-1]
+                '//*[text()="%s"]/parent::td/parent::tr/parent::tbody/'
+                'preceding-sibling::thead/tr[1]/th[@abbr="DIV"]' % team
+            )[0].text
+
+            conference = [
+                item.get('class').replace(conferenceText, '')
+                for item in data.xpath(
+                    '//*[text()="%s"]/parent::td/parent::tr/parent::tbody/'
+                    'parent::table/preceding-sibling::div[starts-with('
+                    '@class, "%s")]' % (team, conferenceText)
+                )
+            ][-1]
 
             if conference not in results:
                 results[conference] = {}
@@ -239,12 +270,15 @@ class NHLDivisions(HTMLCollector):
 
     def verify(self, data):
         seasonBlocks = data.xpath('//div[@class="sectionHeader"]/h3')
+
         if self.season:
             expectedSeason = self.season[:4] + '\-' + self.season[4:]
         else:
             expectedSeason = '[0-9]{4}\-[0-9]{4}'
 
-        if not (seasonBlocks and re.match(expectedSeason, seasonBlocks[0].text.strip())):
+        foundSeason = re.match(expectedSeason, seasonBlocks[0].text.strip())
+
+        if not (seasonBlocks and foundSeason):
             raise UnexpectedPageContents('Expected {} season, found {}'.format(
                 expectedSeason, seasonBlocks[0].text.strip()))
 
@@ -258,13 +292,15 @@ class NHLSchedule(HTMLCollector):
     """
     SCHEDULE_ROW_XPATH = '//table[@class="data schedTbl"]/tbody/tr'
 
-    def __init__(self, season, season_type='Regular', url='http://www.nhl.com/ice/schedulebyseason.htm?season={}&gameType={}&team=&network=&venue='):
+    def __init__(self, season, season_type='Regular', url=SCHEDULE_URL):
         self.check_season(season)
         self.check_season_type(season_type)
         self.season = season
         self.season_type = season_type
 
-        super(NHLSchedule, self).__init__(url.format(season, self.get_season_type_id(season_type)))
+        super(NHLSchedule, self).__init__(
+            url.format(season, self.get_season_type_id(season_type))
+        )
 
     def parse(self, data):
         games = []
@@ -279,7 +315,11 @@ class NHLSchedule(HTMLCollector):
         return games
 
     def parse_row(self, row):
-        teams = [item.get('rel') for item in row.xpath('td[@class="team"]/div[@class="teamName"]/a')]
+        teams = [
+            item.get('rel') for item in row.xpath(
+                'td[@class="team"]/div[@class="teamName"]/a'
+            )
+        ]
 
         if not len(teams) == 2:
             return
@@ -292,13 +332,16 @@ class NHLSchedule(HTMLCollector):
             startDate = datetime.datetime.strptime(
                 date.strip(), '%a %b %d, %Y').date()
 
-            # If there isn't yet a known time for the game, that's okay, let's just
-            # leave it as None, we'll be checking again.
+            # If there isn't yet a known time for the game, that's okay,
+            # let's just leave it as None, we'll be checking again.
             if 'TBD' not in row.xpath('td[@class="time"]')[0].text_content():
                 time = row.xpath(
                     'td[@class="time"]/div[@class="skedStartTimeEST"]')[0].text
                 localTime = datetime.datetime.strptime(
-                    date + ' ' + time.replace('ET', '').strip(),  '%a %b %d, %Y %I:%M %p')
+                    date + ' ' + time.replace('ET', '').strip(),
+                    '%a %b %d, %Y %I:%M %p'
+                )
+
                 startTime = self.convert_datetime_to_utc(localTime).time()
             else:
                 startTime = None
@@ -322,7 +365,9 @@ class NHLGameReports(NHLSchedule):
     Collects GameReport ids from an NHL Schedule
     """
     # Will match the type to group 1 and the game id to group 2
-    GAME_ID_REGEX = re.compile('http://www.nhl.com/gamecenter/en/(recap|preview)\?id=[0-9]{4}([0-9]+)')
+    GAME_ID_REGEX = re.compile(
+        'http://www.nhl.com/gamecenter/en/(recap|preview)\?id=[0-9]{4}([0-9]+)'
+    )
 
     def parse(self, data):
         games = []
@@ -395,15 +440,15 @@ class NHLRoster(HTMLCollector):
         for row in data.xpath('//table[@class="data"]/tr[@class!="hdr"]'):
             if row.xpath("td[@colspan=7]"):
                 continue
-
+            url = self.teamDomain + row.xpath('td/nobr/a')[0].attrib['href']
             player = {
                 'number': row.xpath('td/span[@class="sweaterNo"]')[0].text,
                 'name': row.xpath('td/nobr/a')[0].text,
-                'url': self.teamDomain + row.xpath('td/nobr/a')[0].attrib['href'],
                 'height': row.xpath('td[3]')[0].text,
                 'weight': row.xpath('td[4]')[0].text,
                 'dob': row.xpath('td[5]')[0].text,
-                'hometown': row.xpath('td[7]')[0].text
+                'hometown': row.xpath('td[7]')[0].text,
+                'url': url,
             }
 
             players.append(player)
@@ -412,15 +457,21 @@ class NHLRoster(HTMLCollector):
 
     def verify(self, data):
         rosterHeadersPlayerName = data.xpath(
-            '//table[@class="data"]/tr[@class="hdr"]/td[2]/a')
-        if not (len(rosterHeadersPlayerName) == 3 and 'Name' in rosterHeadersPlayerName[0].text):
+            '//table[@class="data"]/tr[@class="hdr"]/td[2]/a'
+        )
+
+        correctNameField = 'Name' in rosterHeadersPlayerName[0].text
+
+        if not (len(rosterHeadersPlayerName) == 3 and correctNameField):
             raise UnexpectedPageContents(
-                'Unable to locate roster header as expected on {}'.format(data.base_url))
+                'Unable to locate roster header as expected on '
+                '{}'.format(data.base_url)
+            )
 
 
 class NHLEventLocations(JSONCollector):
 
-    def __init__(self, season, reportid, url='http://live.nhl.com/GameData/{}/{}/PlayByPlay.json'):
+    def __init__(self, season, reportid, url=EVENT_LOCATION_URL):
         self.season = season
         self.reportid = reportid
         super(NHLEventLocations, self).__init__(
@@ -436,12 +487,15 @@ class NHLEventLocations(JSONCollector):
     def verify(self, data):
         if 'data' not in data:
             raise UnexpectedPageContents(
-                'data section of JSON does not exist on {}'.format(data.base_url))
+                'data section of JSON does not exist on {}'.format(
+                    data.base_url
+                )
+            )
 
 
 class NHLEvents(HTMLCollector):
 
-    def __init__(self, season, reportid, url='http://www.nhl.com/scores/htmlreports/{}/PL{}.HTM'):
+    def __init__(self, season, reportid, url=EVENT_URL):
         self.season = season
         self.reportid = reportid
         super(NHLEvents, self).__init__(url.format(season, reportid))
@@ -466,23 +520,39 @@ class NHLEvents(HTMLCollector):
 
             for player in awayice:
                 events[-1]['away'].append({
-                    'player': player.xpath('table/tr/td')[0].text_content().strip(),
-                    'position': player.xpath('table/tr/td')[1].text_content().strip()
+                    'player': player.xpath(
+                        'table/tr/td'
+                    )[0].text_content().strip(),
+                    'position': player.xpath(
+                        'table/tr/td'
+                    )[1].text_content().strip()
                 })
 
             for player in homeice:
                 events[-1]['home'].append({
-                    'player': player.xpath('table/tr/td')[0].text_content().strip(),
-                    'position': player.xpath('table/tr/td')[1].text_content().strip()
+                    'player': player.xpath(
+                        'table/tr/td'
+                    )[0].text_content().strip(),
+                    'position': player.xpath(
+                        'table/tr/td'
+                    )[1].text_content().strip()
                 })
 
         return events
 
     def verify(self, data):
-        header = '\r\n#\r\nPer\r\nStr\r\nTime:ElapsedGame\r\nEvent\r\nDescription\r\nTOR On Ice\r\nWSH On Ice\r\n'
-        headerSearch = [
-            e for e in data.xpath('//tr') if e.text_content() == header]
+        header = '\r\n#\r\nPer\r\nStr\r\nTime:ElapsedGame\r\nEvent\r\n'
+        header += 'Description\r\nTOR On Ice\r\nWSH On Ice\r\n'
 
-        if headerSearch and not (data.xpath('//table[@id="Visitor"]') and data.xpath('//table[@id="Home"]')):
+        headerSearch = [
+            e for e in data.xpath('//tr') if e.text_content() == header
+        ]
+
+        if headerSearch and not (data.xpath('//table[@id="Visitor"]') and
+           data.xpath('//table[@id="Home"]')):
+
             raise UnexpectedPageContents(
-                'Unable to locate events page as expected on {}'.format(data.base_url))
+                'Unable to locate events page as expected on {}'.format(
+                    data.base_url
+                )
+            )
