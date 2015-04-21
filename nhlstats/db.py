@@ -32,7 +32,7 @@ def create_tables():
     for model in models.MODELS:
         m = getattr(models, model)
         if m.table_exists():
-            logger.info('{} table already exists, skipping...'.format(model))
+            logger.debug('{} table already exists, skipping...'.format(model))
             continue
         logger.info('Creating {} table...'.format(model))
         m.create_table()
@@ -43,7 +43,7 @@ def drop_tables():
     for model in reversed(models.MODELS):
         m = getattr(models, model)
         if not m.table_exists():
-            logger.info('{} does not exist, skipping...'.format(model))
+            logger.debug('{} does not exist, skipping...'.format(model))
             continue
         logger.info('Dropping {} table...'.format(model))
         m.drop_table()
