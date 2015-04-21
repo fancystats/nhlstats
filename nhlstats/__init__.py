@@ -40,7 +40,7 @@ actions = [
 # TODO: Add ability to specify seasons to collect via CLI/env
 # TODO: Make logging a pass through by default in the library itself.
 seasons = [
-    '20132014'
+    '20142015'
 ]
 
 
@@ -75,6 +75,9 @@ def get_data_for_game(game):
                     # TODO: DO NOT CHECK THIS IN!!!!!!
                     game.end = datetime.datetime(2000, 01, 01, 1, 1, 1)
                 game.save()
+                logger.info('Game {} has ended at {}'.format(
+                    game, game.end
+                ))
             else:
                 raise ValueError('Unable to parse GEND')
 
@@ -103,8 +106,8 @@ def get_data_for_games(games):
             logger.exception('Error getting data for {}'.format(game))
             sys.exit(1)
 
-    logger.debug('Processed {} games'.format(success_counter))
-    logger.debug('Failed to process {} games'.format(failure_counter))
+    logger.info('Processed {} games'.format(success_counter))
+    logger.info('Failed to process {} games'.format(failure_counter))
 
 
 def populate():

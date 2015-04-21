@@ -2,15 +2,39 @@
 
 import logging
 import optparse
+import time
 import sys
 
 from nhlstats import main, actions, __version__
 
 
+def frequency_wrapper(action, frequency):
+    # TODO: Be smarter here and run *every* frequency seconds
+    # To expand on that a bit - what we really want is to ensure
+    # we're pulling data every frequency seconds, instead what
+    # we're doing is pulling data and then waiting frequency
+    # seconds. That's a subtle difference that actually probably
+    # won't matter too much, but it could be important at some
+    # point if runs take longer. Potentially the optimal thing
+    # here is to allow for scheduling of individual games in
+    # a celery queue. We do want to be careful though about
+    # hitting the servers too hard.
+    while True:
+        main(action)
+        time.sleep(frequency)
+
+
 if __name__ == '__main__':
     actions_string = 'ACTION is one of {}'.format(', '.join(actions))
+
     parser = optparse.OptionParser(
-        usage='usage: %prog [options] ACTION\n\n{}'.format(actions_string))
+        usage='usage: %prog [options] ACTION\n\n{}'.format(actions_string)
+    )
+
+    parser.add_option(
+        '-f', '--frequency', dest='frequency', type='int',
+        help='how many seconds to wait between runs of the action'
+    )
 
     parser.add_option(
         '-v', '--verbose', dest='verbose', action='store_true', default=False,
@@ -49,4 +73,7 @@ if __name__ == '__main__':
     logging.debug('Setting loglevel to DEBUG')
 
     if args[0].lower() != 'testignore':
-        main(args[0])
+        if options.frequency:
+            frequency_wrapper(args[0], options.frequency)
+        else:
+            main(args[0])
