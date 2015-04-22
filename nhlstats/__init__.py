@@ -39,6 +39,7 @@ actions = [
 # TODO: Add ability to specify wait timer when grabbing new pages via CLI/env
 # TODO: Add ability to specify seasons to collect via CLI/env
 # TODO: Make logging a pass through by default in the library itself.
+# TODO: Do a unicode/str audit
 seasons = [
     '20142015'
 ]

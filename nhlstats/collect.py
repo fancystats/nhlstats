@@ -12,8 +12,9 @@ import json
 import logging
 import urllib2
 import datetime
+from io import StringIO
 from hashlib import sha1
-from lxml.html import parse
+from lxml.html import parse as lxml_parser
 
 from .version import __version__
 
@@ -27,6 +28,8 @@ DIVISION_URL = 'http://www.nhl.com/ice/standings.htm?season={}&type=DIV'
 SCHEDULE_URL = 'http://www.nhl.com/ice/schedulebyseason.htm?season={}&gameType={}&team=&network=&venue='
 EVENT_LOCATION_URL = 'http://live.nhl.com/GameData/{}/{}/PlayByPlay.json'
 EVENT_URL = 'http://www.nhl.com/scores/htmlreports/{}/PL{}.HTM'
+
+USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2227.1 Safari/537.36'
 
 
 class UnexpectedPageContents(Exception):
@@ -50,8 +53,9 @@ class Collector(object):
     class HTTPError(urllib2.HTTPError):
         pass
 
-    def __init__(self, url, cache_dir='cache'):
+    def __init__(self, url, cache_dir='cache', use_cache=True):
         self.url = url
+        self.use_cache = use_cache
         self.cache_dir = cache_dir
         self.loaded_from_cache = False
 
@@ -108,7 +112,13 @@ class Collector(object):
         logger.debug('Storing {} in cache as {}'.format(url, local_path))
 
         with open(local_path, 'wb') as fp:
-            fp.write(content)
+            fp.write(content.read())
+
+    def load_data(self, url):
+        if self.use_cache:
+            return self.load_from_cache(url)
+        else:
+            return self.load_from_web(url)
 
     def load_from_cache(self, url):
         """
@@ -117,23 +127,37 @@ class Collector(object):
         """
         local_path = self.url_to_filename(url)
         if not os.path.exists(local_path):
-            try:
-                logger.debug(
-                    'Unable to load {} from cache ({}), downloading.'.format(
-                        url, local_path
-                    )
+            logger.debug(
+                'Unable to load {} from cache ({}), downloading.'.format(
+                    url, local_path
                 )
-                self.store_cache(url, urllib2.urlopen(url).read())
-            except (urllib2.HTTPError, urllib2.URLError):
-                logger.error('Unable to load page at {}'.format(url))
-                raise
+            )
+
+            self.store_cache(url, self.load_from_web(url))
         else:
             self.loaded_from_cache = True
             logger.debug('Loaded {} from cache ({})'.format(
                 url, local_path
             ))
 
-        return local_path
+        with open(local_path) as fp:
+            data = StringIO(fp.read().decode('utf-8'))
+
+        return data
+
+    def load_from_web(self, url):
+        try:
+            logger.debug('Loading {} from the web'.format(url))
+
+            request = urllib2.Request(url)
+            request.add_header('User-Agent', USER_AGENT)
+
+            data = urllib2.urlopen(request)
+
+            return StringIO(data.read().decode('utf-8'))
+        except (urllib2.HTTPError, urllib2.URLError):
+            logger.error('Unable to load page at {}'.format(url))
+            raise
 
     def parse(self, data):
         """
@@ -159,7 +183,7 @@ class HTMLCollector(Collector):
     """
 
     def scrape(self):
-        data = parse(self.load_from_cache(self.url)).getroot()
+        data = lxml_parser(self.load_data(self.url)).getroot()
 
         # The parse functionality must be implemented by
         # our sub.  We currently aren't
@@ -175,7 +199,7 @@ class JSONCollector(Collector):
     """
 
     def scrape(self):
-        with open(self.load_from_cache(self.url)) as fp:
+        with open(self.load_data(self.url)) as fp:
             data = json.load(fp)
 
             self.verify(data)
@@ -188,18 +212,22 @@ class NHLArena(HTMLCollector):
     This retrieves information on an arena from the NHL
     """
 
-    def __init__(self, team, url=ARENA_URL):
-        super(NHLArena, self).__init__(url.format(team))
+    def __init__(self, team, url=ARENA_URL, args, kwargs):
+        super(NHLArena, self).__init__(
+            url.format(team),
+            *args,
+            **kwargs
+        )
 
     def parse(self, data):
         # long re is long
         info = re.compile(
-            '<div style="font-weight: normal; font-size: 12px; font-family: '
-            'arial,helvetica;"><b>(?P<name>[\w\s\-\,\.\&À-ú]+)</b><br />'
-            '(?P<street>[\w\s\-\,\.\&À-ú]+)<br />'
-            '(?P<city>[\w\s\-\,\.\&À-ú]+), '
-            '(?P<state>[A-Z]{2}), (?P<country>[\w\s\-\,\.\&À-ú]+)  '
-            '(?P<postal_code>[\w\s\-\,\.\&]+)<br /></div>'
+            u'<div style="font-weight: normal; font-size: 12px; font-family: '
+            u'arial,helvetica;"><b>(?P<name>[\w\s\-\,\.\&À-úè]+)</b><br />'
+            u'(?P<street>[\w\s\-\,\.\&À-ú]+)<br />'
+            u'(?P<city>[\w\s\-\,\.\&À-ú]+), '
+            u'(?P<state>[A-Z]{2}), (?P<country>[\w\s\-\,\.\&À-ú]+)  '
+            u'(?P<postal_code>[\w\s\-\,\.\&]+)<br /></div>'
         )
 
         return re.search(info, data.text_content()).groupdict()
@@ -333,10 +361,12 @@ class NHLSchedule(HTMLCollector):
                 date.strip(), '%a %b %d, %Y').date()
 
             # If there isn't yet a known time for the game, that's okay,
-            # let's just leave it as None, we'll be checking again.
+            # let's just leave it as min.time(), we'll be checking again.
             if 'TBD' not in row.xpath('td[@class="time"]')[0].text_content():
                 time = row.xpath(
-                    'td[@class="time"]/div[@class="skedStartTimeEST"]')[0].text
+                    'td[@class="time"]/div[@class="skedStartTimeEST"]'
+                )[0].text.replace('*', '')  # Remove 'if necessary'
+
                 localTime = datetime.datetime.strptime(
                     date + ' ' + time.replace('ET', '').strip(),
                     '%a %b %d, %Y %I:%M %p'
@@ -344,7 +374,8 @@ class NHLSchedule(HTMLCollector):
 
                 startTime = self.convert_datetime_to_utc(localTime).time()
             else:
-                startTime = None
+                # Note that this represents TBD
+                startTime = datetime.datetime.min.time()
 
             return {
                 'season': self.season,
