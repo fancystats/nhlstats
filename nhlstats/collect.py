@@ -199,11 +199,11 @@ class JSONCollector(Collector):
     """
 
     def scrape(self):
-        with open(self.load_data(self.url)) as fp:
+        with self.load_data(self.url) as fp:
             data = json.load(fp)
 
-            self.verify(data)
-            return self.parse(data)
+        self.verify(data)
+        return self.parse(data)
 
 
 class NHLArena(HTMLCollector):
@@ -212,12 +212,8 @@ class NHLArena(HTMLCollector):
     This retrieves information on an arena from the NHL
     """
 
-    def __init__(self, team, url=ARENA_URL, args, kwargs):
-        super(NHLArena, self).__init__(
-            url.format(team),
-            *args,
-            **kwargs
-        )
+    def __init__(self, team, url=ARENA_URL):
+        super(NHLArena, self).__init__(url.format(team))
 
     def parse(self, data):
         # long re is long
