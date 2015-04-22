@@ -112,7 +112,7 @@ class Collector(object):
         logger.debug('Storing {} in cache as {}'.format(url, local_path))
 
         with open(local_path, 'wb') as fp:
-            fp.write(content.read())
+            fp.write(content.read().encode('utf-8'))
 
     def load_data(self, url):
         if self.use_cache:
