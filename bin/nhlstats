@@ -75,14 +75,18 @@ if __name__ == '__main__':
         format='%(asctime)s-%(levelname)s-%(name)s: %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
-    logging.debug('Setting loglevel to DEBUG')
+    logger = logging.getLogger('nhlstats')
+    logger.debug('Setting loglevel to DEBUG')
 
     if args[0].lower() != 'testignore':
-        if options.frequency:
-            frequency_wrapper(
-                args[0],
-                options.use_cache,
-                options.frequency
-            )
-        else:
-            main(args[0], options.use_cache)
+        try:
+            if options.frequency:
+                frequency_wrapper(
+                    args[0],
+                    options.use_cache,
+                    options.frequency
+                )
+            else:
+                main(args[0], options.use_cache)
+        except (KeyboardInterrupt, SystemExit):
+            logger.info('nhlstats killed, shutting down.')
