@@ -45,8 +45,8 @@ seasons = [
 ]
 
 
-def get_data_for_game(game):
-    events = NHLEvents(game.season.year, game.report_id)
+def get_data_for_game(game, use_cache=False):
+    events = NHLEvents(game.season.year, game.report_id, use_cache=use_cache)
 
     for event in events.scrape():
         if event['event'] == 'GEND':
@@ -87,7 +87,7 @@ def get_data_for_game(game):
         time.sleep(5)
 
 
-def get_data_for_games(games):
+def get_data_for_games(games, use_cache=False):
     if games is None:
         games = []
 
@@ -96,7 +96,7 @@ def get_data_for_games(games):
 
     for game in games:
         try:
-            get_data_for_game(game)
+            get_data_for_game(game, use_cache)
             success_counter += 1
         except urllib2.HTTPError:
             logger.warning(
@@ -111,7 +111,7 @@ def get_data_for_games(games):
     logger.info('Failed to process {} games'.format(failure_counter))
 
 
-def populate():
+def populate(use_cache):
     """
     Retrieves base information including
     teams, rosters, seasons, arenas, etc.
@@ -131,21 +131,23 @@ def populate():
     SeasonType.get_or_create(league=league, name='Playoffs', external_id='3')
 
     # Get the latest set of division information
-    divisions = NHLDivisions().scrape()
+    divisions = NHLDivisions(use_cache=use_cache).scrape()
     for conference in divisions:
         con_model = Conference.get_or_create(league=league, name=conference)
         for division in divisions[conference]:
             Division.get_or_create(conference=con_model, name=division)
 
-    for team in NHLTeams().scrape():
+    for team in NHLTeams(use_cache=use_cache).scrape():
         # Convert the textual divison name to a Division model
         team['division'] = Division.get(Division.name ** team['division'])
         Team.get_or_create(**team)
-        Arena.get_or_create(**NHLArena(team['code']).scrape())
+        Arena.get_or_create(
+            **NHLArena(team['code'], use_cache=use_cache).scrape()
+        )
 
     # Gather our seasons:
     for years in seasons:
-        divisions = NHLDivisions(years).scrape()
+        divisions = NHLDivisions(years, use_cache=use_cache).scrape()
 
         for season_type in SeasonType.select():
             season = Season.get_or_create(
@@ -154,14 +156,20 @@ def populate():
                 type=season_type
             )
 
-            for game in NHLGameReports(years, season_type.name).scrape():
+            games = NHLGameReports(
+                years,
+                season_type.name,
+                use_cache=use_cache
+            ).scrape()
+
+            for game in games:
                 game['home'] = Team.get(code=game['home'])
                 game['road'] = Team.get(code=game['road'])
                 game['season'] = season
                 Game.get_or_create(**game).save()
 
 
-def main(action='collect'):
+def main(action='collect', use_cache=False):
     """
     The main entry point for the application
     """
@@ -169,14 +177,23 @@ def main(action='collect'):
     # By default, we collect info on current games
     if action == 'collect':
         connect_db()
-        get_data_for_games(Game.get_active_games())
+        get_data_for_games(
+            Game.get_active_games(),
+            use_cache
+        )
     # Otherwise we can look to update finished games
     elif action == 'update':
         connect_db()
-        get_data_for_games(Game.get_orphaned_games())
-        get_data_for_games(Game.get_games_in_date_range())
+        get_data_for_games(
+            Game.get_orphaned_games(),
+            use_cache
+        )
+        get_data_for_games(
+            Game.get_games_in_date_range(),
+            use_cache
+        )
     elif action == 'populate':
-        populate()
+        populate(use_cache)
     elif action == 'syncdb':
         create_tables()
     elif action == 'dropdb':

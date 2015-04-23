@@ -8,7 +8,7 @@ import sys
 from nhlstats import main, actions, __version__
 
 
-def frequency_wrapper(action, frequency):
+def frequency_wrapper(action, use_cache, frequency):
     # TODO: Be smarter here and run *every* frequency seconds
     # To expand on that a bit - what we really want is to ensure
     # we're pulling data every frequency seconds, instead what
@@ -20,7 +20,7 @@ def frequency_wrapper(action, frequency):
     # a celery queue. We do want to be careful though about
     # hitting the servers too hard.
     while True:
-        main(action)
+        main(action, use_cache)
         time.sleep(frequency)
 
 
@@ -29,6 +29,11 @@ if __name__ == '__main__':
 
     parser = optparse.OptionParser(
         usage='usage: %prog [options] ACTION\n\n{}'.format(actions_string)
+    )
+
+    parser.add_option(
+        '-c', '--use-cache', dest='use_cache', action='store_true',
+        default=False, help='load pages from cache if possible.'
     )
 
     parser.add_option(
@@ -74,6 +79,10 @@ if __name__ == '__main__':
 
     if args[0].lower() != 'testignore':
         if options.frequency:
-            frequency_wrapper(args[0], options.frequency)
+            frequency_wrapper(
+                args[0],
+                options.use_cache,
+                options.frequency
+            )
         else:
-            main(args[0])
+            main(args[0], options.use_cache)

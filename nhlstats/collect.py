@@ -28,6 +28,8 @@ DIVISION_URL = 'http://www.nhl.com/ice/standings.htm?season={}&type=DIV'
 SCHEDULE_URL = 'http://www.nhl.com/ice/schedulebyseason.htm?season={}&gameType={}&team=&network=&venue='
 EVENT_LOCATION_URL = 'http://live.nhl.com/GameData/{}/{}/PlayByPlay.json'
 EVENT_URL = 'http://www.nhl.com/scores/htmlreports/{}/PL{}.HTM'
+TEAMS_URL = 'http://www.nhl.com/ice/teams.htm'
+ROSTER_URL = 'http://{}.nhl.com/club/roster.htm'
 
 USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2227.1 Safari/537.36'
 
@@ -53,7 +55,7 @@ class Collector(object):
     class HTTPError(urllib2.HTTPError):
         pass
 
-    def __init__(self, url, cache_dir='cache', use_cache=True):
+    def __init__(self, url, cache_dir='cache', use_cache=False):
         self.url = url
         self.use_cache = use_cache
         self.cache_dir = cache_dir
@@ -212,8 +214,12 @@ class NHLArena(HTMLCollector):
     This retrieves information on an arena from the NHL
     """
 
-    def __init__(self, team, url=ARENA_URL):
-        super(NHLArena, self).__init__(url.format(team))
+    def __init__(self, team, url=ARENA_URL, *args, **kwargs):
+        super(NHLArena, self).__init__(
+            url.format(team),
+            *args,
+            **kwargs
+        )
 
     def parse(self, data):
         # long re is long
@@ -237,7 +243,7 @@ class NHLDivisions(HTMLCollector):
     scraping the conferences, divisions, teams.
     """
 
-    def __init__(self, season=None, url=DIVISION_URL):
+    def __init__(self, season=None, url=DIVISION_URL, *args, **kwargs):
         if season:
             self.check_season(season)
         else:
@@ -245,7 +251,11 @@ class NHLDivisions(HTMLCollector):
 
         self.season = season
 
-        super(NHLDivisions, self).__init__(url.format(season))
+        super(NHLDivisions, self).__init__(
+            url.format(season),
+            *args,
+            **kwargs
+        )
 
     def parse(self, data):
         conferenceText = 'conferenceHeader'
@@ -316,14 +326,17 @@ class NHLSchedule(HTMLCollector):
     """
     SCHEDULE_ROW_XPATH = '//table[@class="data schedTbl"]/tbody/tr'
 
-    def __init__(self, season, season_type='Regular', url=SCHEDULE_URL):
+    def __init__(self, season, season_type='Regular', url=SCHEDULE_URL,
+                 *args, **kwargs):
         self.check_season(season)
         self.check_season_type(season_type)
         self.season = season
         self.season_type = season_type
 
         super(NHLSchedule, self).__init__(
-            url.format(season, self.get_season_type_id(season_type))
+            url.format(season, self.get_season_type_id(season_type)),
+            *args,
+            **kwargs
         )
 
     def parse(self, data):
@@ -387,7 +400,6 @@ class NHLSchedule(HTMLCollector):
 
 
 class NHLGameReports(NHLSchedule):
-
     """
     Collects GameReport ids from an NHL Schedule
     """
@@ -429,8 +441,8 @@ class NHLTeams(HTMLCollector):
     games, which presumably only contain NHL teams.
     """
 
-    def __init__(self, url='http://www.nhl.com/ice/teams.htm'):
-        super(NHLTeams, self).__init__(url)
+    def __init__(self, url=TEAMS_URL, *args, **kwargs):
+        super(NHLTeams, self).__init__(url, *args, **kwargs)
 
     def parse(self, data):
         retrieved_data = []
@@ -458,9 +470,13 @@ class NHLRoster(HTMLCollector):
     Gets an NHL Roster for a team
     """
 
-    def __init__(self, team, url='http://{}.nhl.com/club/roster.htm'):
+    def __init__(self, team, url=ROSTER_URL, *args, **kwargs):
         self.teamDomain = 'http://{}.nhl.com'.format(team)
-        super(NHLRoster, self).__init__(url.format(team))
+        super(NHLRoster, self).__init__(
+            url.format(team),
+            *args,
+            **kwargs
+        )
 
     def parse(self, data):
         players = []
@@ -498,11 +514,15 @@ class NHLRoster(HTMLCollector):
 
 class NHLEventLocations(JSONCollector):
 
-    def __init__(self, season, reportid, url=EVENT_LOCATION_URL):
+    def __init__(self, season, reportid, url=EVENT_LOCATION_URL,
+                 *args, **kwargs):
         self.season = season
         self.reportid = reportid
         super(NHLEventLocations, self).__init__(
-            url.format(season, season[:4] + reportid))
+            url.format(season, season[:4] + reportid),
+            *args,
+            **kwargs
+        )
 
     def parse(self, data):
         return {
@@ -522,10 +542,14 @@ class NHLEventLocations(JSONCollector):
 
 class NHLEvents(HTMLCollector):
 
-    def __init__(self, season, reportid, url=EVENT_URL):
+    def __init__(self, season, reportid, url=EVENT_URL, *args, **kwargs):
         self.season = season
         self.reportid = reportid
-        super(NHLEvents, self).__init__(url.format(season, reportid))
+        super(NHLEvents, self).__init__(
+            url.format(season, reportid),
+            *args,
+            **kwargs
+        )
 
     def parse(self, data):
         events = []
