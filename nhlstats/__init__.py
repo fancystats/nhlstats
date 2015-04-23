@@ -46,6 +46,8 @@ seasons = [
 
 
 def get_data_for_game(game, use_cache=False):
+    logger.info('Getting data for {}'.format(game))
+
     events = NHLEvents(game.season.year, game.report_id, use_cache=use_cache)
 
     for event in events.scrape():

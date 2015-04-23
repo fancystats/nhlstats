@@ -118,9 +118,11 @@ class TestCollection(unittest.TestCase):
         assert(len(rego) / 15 == 76)
 
         # Let's find the games on March 16th.  NHL.com says there were 9 games.
+        noonMaySixteenth = datetime.datetime(2014, 3, 16, 12, 0)
+        noonMaySeventeenth = datetime.datetime(2014, 3, 17, 12, 0)
         marchSixteenth = [
             game for game in rego
-            if game['start'].date() == datetime.date(2014, 3, 16)
+            if (noonMaySixteenth < game['start'] < noonMaySeventeenth)
         ]
 
         assert(len(marchSixteenth) == 9)
@@ -151,9 +153,11 @@ class TestCollection(unittest.TestCase):
 
         # Ensure that Boston-Montreal is the only game listed for May 1st,
         # and that it starts at 11:30 UTC.
+        noonMayFirst = datetime.datetime(2014, 5, 1, 12, 0)
+        noonMaySecond = datetime.datetime(2014, 5, 2, 12, 0)
         mayFirst = [
             game for game in playoffs
-            if game['start'].date() == datetime.date(2014, 5, 1)
+            if (noonMayFirst < game['start'] < noonMaySecond)
         ]
 
         assert(len(mayFirst) == 1)
@@ -167,9 +171,11 @@ class TestCollection(unittest.TestCase):
 
         # Let's try getting some data from the first post-lockout pre-season
         postLockoutPre = collect.NHLSchedule('20052006', 'Preseason').scrape()
+        noonSepTwentySixth = datetime.datetime(2005, 9, 26, 12, 0)
+        noonSepTwentySeventh = datetime.datetime(2005, 9, 27, 12, 0)
         sepTwentySixth = [
             game for game in postLockoutPre
-            if game['start'].date() == datetime.date(2005, 9, 26)
+            if (noonSepTwentySixth < game['start'] < noonSepTwentySeventh)
         ]
 
         assert(len(sepTwentySixth) == 1)

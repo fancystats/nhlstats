@@ -365,9 +365,8 @@ class NHLSchedule(HTMLCollector):
             return
         else:
             date = row.xpath(
-                'td[@class="date"]/div[@class="skedStartDateSite"]')[0].text
-            startDate = datetime.datetime.strptime(
-                date.strip(), '%a %b %d, %Y').date()
+                'td[@class="date"]/div[@class="skedStartDateSite"]'
+            )[0].text
 
             # If there isn't yet a known time for the game, that's okay,
             # let's just leave it as min.time(), we'll be checking again.
@@ -376,19 +375,37 @@ class NHLSchedule(HTMLCollector):
                     'td[@class="time"]/div[@class="skedStartTimeEST"]'
                 )[0].text.replace('*', '')  # Remove 'if necessary'
 
-                localTime = datetime.datetime.strptime(
-                    date + ' ' + time.replace('ET', '').strip(),
+                local_start = datetime.datetime.strptime(
+                    '{} {}'.format(
+                        date,
+                        time.replace('ET', '').strip()
+                    ),
                     '%a %b %d, %Y %I:%M %p'
                 )
 
-                startTime = self.convert_datetime_to_utc(localTime).time()
+                start_utc = self.convert_datetime_to_utc(local_start)
+                start = datetime.datetime.combine(
+                    start_utc.date(),
+                    start_utc.time()
+                )
+                logger.debug('local: {} utc: {}'.format(local_start, start))
             else:
                 # Note that this represents TBD
-                startTime = datetime.datetime.min.time()
+                start_date = datetime.datetime.strptime(
+                    date.strip(),
+                    '%a %b %d, %Y'
+                ).date()
+
+                start = datetime.datetime.combine(
+                    start_date,
+                    datetime.datetime.min.time()
+                )
+
+                logger.debug('local: {} utc: {}'.format(start_date, start))
 
             return {
                 'season': self.season,
-                'start': datetime.datetime.combine(startDate, startTime),
+                'start': start,
                 'home': teams[1],
                 'road': teams[0],
             }
